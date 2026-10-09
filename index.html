@@ -174,7 +174,7 @@ canvas{display:block;touch-action:none;outline:none}
 .btn.primary:hover{background:linear-gradient(180deg,#8a3a3a,#3a1414)}
 .btn.ghost{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.14)}
 
-/* NEW CRAFTING */
+/* CRAFTING */
 .tabRow{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap}
 .tab{flex:1;min-width:72px;padding:8px 6px;border-radius:8px;
   background:rgba(255,255,255,.05);color:#9a8a80;font-size:10.5px;font-weight:600;
@@ -285,8 +285,8 @@ canvas{display:block;touch-action:none;outline:none}
 
   <div id="brightnessBox">
     <label>☀️
-      <input type="range" id="brightness" min="60" max="180" value="130" step="5">
-      <span class="val" id="brightnessVal">130%</span>
+      <input type="range" id="brightness" min="60" max="200" value="155" step="5">
+      <span class="val" id="brightnessVal">155%</span>
     </label>
   </div>
 
@@ -420,22 +420,21 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,isMobile?1.5:2));
 renderer.setSize(innerWidth,innerHeight);
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.35;
+renderer.toneMappingExposure=1.66;
 document.body.appendChild(renderer.domElement);
 const canvas=renderer.domElement;
 
-/* Brightness control */
+/* Brightness control — шинэ default 155% */
 const brightnessState={
-  value: parseFloat(localStorage.getItem('wf_brightness')||'1.30'),
+  value: parseFloat(localStorage.getItem('wf_brightness')||'1.55'),
 };
 function applyBrightness(v){
   brightnessState.value=v;
-  renderer.toneMappingExposure=0.55+v*0.62;
+  renderer.toneMappingExposure=0.5+v*0.75;
   const el=$('brightnessVal');
   if(el) el.textContent=Math.round(v*100)+'%';
   localStorage.setItem('wf_brightness',String(v));
 }
-// Wire slider
 {
   const slider=$('brightness');
   if(slider){
@@ -454,11 +453,11 @@ addEventListener('resize',()=>{
   renderer.setSize(innerWidth,innerHeight);
 });
 
-/* Sky shader */
+/* Sky */
 const skyUniforms={
-  topColor:{value:new THREE.Color(0x1a1f38)},
-  midColor:{value:new THREE.Color(0x2a2540)},
-  bottomColor:{value:new THREE.Color(0x4a2a3a)},
+  topColor:{value:new THREE.Color(0x2a3050)},
+  midColor:{value:new THREE.Color(0x3a3558)},
+  bottomColor:{value:new THREE.Color(0x6a4050)},
   offset:{value:60.0},
 };
 const skyMat=new THREE.ShaderMaterial({
@@ -495,11 +494,11 @@ const moon=new THREE.Mesh(new THREE.SphereGeometry(12,16,12),
   new THREE.MeshBasicMaterial({color:0xd8e0ff,transparent:true,opacity:0}));
 scene.add(moon);
 
-/* Lights — brighter */
-const hemi=new THREE.HemisphereLight(0xb8c8e8,0x2a2a30,0.85); scene.add(hemi);
-const ambient=new THREE.AmbientLight(0xffffff,0.5); scene.add(ambient);
-const sun=new THREE.DirectionalLight(0xffe8c0,1.2); sun.position.set(40,80,30); scene.add(sun);
-scene.fog=new THREE.Fog(0x2a2540,20,120);
+/* Lights — БҮРЭН ШИНЭ */
+const hemi=new THREE.HemisphereLight(0xc8d8f0,0x3a3a40,1.3); scene.add(hemi);
+const ambient=new THREE.AmbientLight(0xffffff,0.85); scene.add(ambient);
+const sun=new THREE.DirectionalLight(0xfff0d0,1.6); sun.position.set(40,80,30); scene.add(sun);
+scene.fog=new THREE.Fog(0x3a3558,25,140);
 
 /* Terrain */
 const SEG=isMobile?64:100;
@@ -510,10 +509,10 @@ terrainGeo.rotateX(-Math.PI/2);
   for(let i=0;i<p.count;i++){
     const x=p.getX(i),z=p.getZ(i),y=terrainHeight(x,z);
     p.setY(i,y);
-    if(y<0.4) c.setHex(0x4a3a20);
-    else if(y<5) c.setHex(0x2a4a20);
-    else if(y<10) c.setHex(0x3a4030);
-    else c.setHex(0x5a5a58);
+    if(y<0.4) c.setHex(0x6a5a30);
+    else if(y<5) c.setHex(0x3a6a2a);
+    else if(y<10) c.setHex(0x5a6050);
+    else c.setHex(0x7a7a78);
     const n=0.85+fbm(x*0.4,z*0.4)*0.3;
     col[i*3]=c.r*n; col[i*3+1]=c.g*n; col[i*3+2]=c.b*n;
   }
@@ -524,7 +523,7 @@ scene.add(new THREE.Mesh(terrainGeo,new THREE.MeshStandardMaterial({vertexColors
 
 /* Water */
 const water=new THREE.Mesh(new THREE.PlaneGeometry(500,500),
-  new THREE.MeshStandardMaterial({color:0x1a3a5a,transparent:true,opacity:0.85,
+  new THREE.MeshStandardMaterial({color:0x2a5a7a,transparent:true,opacity:0.85,
     roughness:0.2,metalness:0.6,depthWrite:false}));
 water.rotation.x=-Math.PI/2; water.position.y=WATER_LEVEL; water.renderOrder=1;
 scene.add(water);
@@ -545,9 +544,9 @@ function hideInst(m,i){
 
 const TREE_N=isMobile?70:110;
 const trunkG=new THREE.CylinderGeometry(0.18,0.28,4.5,5); trunkG.translate(0,2.25,0);
-const trunkM=new THREE.MeshStandardMaterial({color:0x3a2a18,roughness:0.95});
+const trunkM=new THREE.MeshStandardMaterial({color:0x5a3a20,roughness:0.95});
 const folG=new THREE.ConeGeometry(2.1,5,6); folG.translate(0,5.5,0);
-const folM=new THREE.MeshStandardMaterial({color:0x1a3a18,roughness:1,flatShading:true});
+const folM=new THREE.MeshStandardMaterial({color:0x2a5a20,roughness:1,flatShading:true});
 const trunkI=new THREE.InstancedMesh(trunkG,trunkM,TREE_N);
 const folI=new THREE.InstancedMesh(folG,folM,TREE_N);
 scene.add(trunkI,folI);
@@ -555,18 +554,18 @@ scene.add(trunkI,folI);
 const ROCK_N=isMobile?50:80;
 const rockI=new THREE.InstancedMesh(
   new THREE.DodecahedronGeometry(0.9,0),
-  new THREE.MeshStandardMaterial({color:0x6a6a68,roughness:0.9,flatShading:true}),ROCK_N);
+  new THREE.MeshStandardMaterial({color:0x8a8a88,roughness:0.9,flatShading:true}),ROCK_N);
 scene.add(rockI);
 
 const BUSH_N=isMobile?40:70;
 const bushG=new THREE.SphereGeometry(0.7,6,5); bushG.scale(1,0.7,1);
 const bushI=new THREE.InstancedMesh(bushG,
-  new THREE.MeshStandardMaterial({color:0x2a4a20,roughness:1,flatShading:true}),BUSH_N);
+  new THREE.MeshStandardMaterial({color:0x3a6a2a,roughness:1,flatShading:true}),BUSH_N);
 scene.add(bushI);
 
 const BONE_N=30;
 const boneI=new THREE.InstancedMesh(new THREE.CylinderGeometry(0.06,0.06,0.5,4),
-  new THREE.MeshStandardMaterial({color:0xd8c8a8,roughness:0.8}),BONE_N);
+  new THREE.MeshStandardMaterial({color:0xe8d8b8,roughness:0.8}),BONE_N);
 scene.add(boneI);
 
 {
@@ -806,27 +805,21 @@ function refreshQuests(){
    CRAFTING
    ================================================================ */
 const RECIPES=[
-  // Tools
   {id:'axe',name:'Stone Axe',ic:'🪓',cost:{wood:3,stone:2},desc:'Gather 3× faster, 25 dmg'},
-  // Weapons
   {id:'dagger',name:'Shadow Dagger',ic:'🗡️',cost:{bone:5,essence:3},desc:'Fast, silent, 40 dmg'},
   {id:'chainsaw',name:'Bone Chainsaw',ic:'🪚',cost:{wood:5,bone:10,stone:3},desc:'Loud, brutal, 75 dmg'},
   {id:'launcher',name:'Nail-Launcher',ic:'🔫',cost:{wood:4,stone:5,bone:3},desc:'Ranged, 50 dmg'},
-  // Items
   {id:'sanity',name:'Sanity Injection',ic:'💉',cost:{herb:3,essence:2},desc:'+50 Sanity instantly'},
   {id:'adrenaline',name:'Adrenaline Injector',ic:'⚡',cost:{herb:2,bone:2,essence:1},desc:'Speed boost 15s'},
   {id:'lantern',name:'Flesh-Bane Lantern',ic:'🏮',cost:{wood:4,bone:3,essence:4},desc:'Blue light, repels shadows'},
   {id:'campfire',name:'Campfire',ic:'🔥',cost:{wood:3,stone:3},desc:'Warm light source'},
-  // Buildings
   {id:'hearth',name:'Village Hearth',ic:'🗿',cost:{wood:8,stone:6,bone:4,essence:3},desc:'Safe zone, unlocks NPCs'},
   {id:'watchtower',name:'Watchtower',ic:'🗼',cost:{wood:10,stone:8,bone:5},desc:'Auto-fires at enemies'},
   {id:'greenhouse',name:'Greenhouse',ic:'🏡',cost:{wood:12,stone:6,herb:4},desc:'Crops grow 2× faster'},
   {id:'vault',name:'Storage Vault',ic:'📦',cost:{stone:12,wood:6,essence:4},desc:'Keep 75% resources on death'},
-  // NPCs
   {id:'miner',name:'Miner',ic:'⛏️',cost:{wood:4,stone:2},desc:'Mines stone automatically'},
   {id:'farmer',name:'Farmer',ic:'🌾',cost:{wood:4,herb:2},desc:'Boosts crop growth'},
   {id:'guard',name:'Guard',ic:'🛡️',cost:{wood:3,stone:3,bone:2},desc:'Defends the hearth'},
-  // Farming
   {id:'mushroomseed',name:'Plant Glow-Mushroom',ic:'🍄',cost:{herb:2,essence:1},desc:'Grows in 40s → Spores'},
   {id:'bloodseed',name:'Plant Blood-Root',ic:'🩸',cost:{herb:2,bone:2},desc:'Grows in 60s → BloodRoot'},
 ];
@@ -1214,57 +1207,57 @@ function placeBuilding(type){
     }
     const flame=new THREE.Mesh(new THREE.ConeGeometry(0.35,1.1,6),flameM);
     flame.position.y=0.65; g.add(flame);
-    const light=new THREE.PointLight(0xffa040,6.0,28,1.4); light.position.y=1.0; g.add(light);
-    b.radius=10; b.light=light; b.flame=flame;
+    const light=new THREE.PointLight(0xffa040,8.0,32,1.4); light.position.y=1.0; g.add(light);
+    b.radius=12; b.light=light; b.flame=flame;
   } else if(type==='lantern'){
     const post=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1.8,5),
       new THREE.MeshStandardMaterial({color:0x3a2a10}));
     post.position.y=0.9; g.add(post);
     const box=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.32,0.28),lanternM);
     box.position.y=1.9; g.add(box);
-    const light=new THREE.PointLight(0x80c8ff,5.0,20,1.5); light.position.y=1.9; g.add(light);
-    b.radius=10; b.light=light;
+    const light=new THREE.PointLight(0x80c8ff,7.0,24,1.5); light.position.y=1.9; g.add(light);
+    b.radius=12; b.light=light;
   } else if(type==='hearth'){
     const stone=new THREE.Mesh(new THREE.CylinderGeometry(1.8,2.0,0.4,8),
-      new THREE.MeshStandardMaterial({color:0x5a5a58,roughness:0.9,flatShading:true}));
+      new THREE.MeshStandardMaterial({color:0x6a6a68,roughness:0.9,flatShading:true}));
     stone.position.y=0.2; g.add(stone);
     const pillar=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.7,2.4,8),
-      new THREE.MeshStandardMaterial({color:0x4a3a28,roughness:0.9}));
+      new THREE.MeshStandardMaterial({color:0x5a4a30,roughness:0.9}));
     pillar.position.y=1.6; g.add(pillar);
     const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(0.4,0),
-      new THREE.MeshBasicMaterial({color:0xa0e0ff}));
+      new THREE.MeshBasicMaterial({color:0xb0e8ff}));
     crystal.position.y=3.1; g.add(crystal);
-    const light=new THREE.PointLight(0xa0e0ff,10.0,32,1.3); light.position.y=3.1; g.add(light);
+    const light=new THREE.PointLight(0xb0e8ff,14.0,38,1.3); light.position.y=3.1; g.add(light);
     const ring=new THREE.Mesh(new THREE.RingGeometry(14.8,15.0,64),
-      new THREE.MeshBasicMaterial({color:0xa0e0ff,transparent:true,opacity:0.25,side:THREE.DoubleSide}));
+      new THREE.MeshBasicMaterial({color:0xb0e8ff,transparent:true,opacity:0.3,side:THREE.DoubleSide}));
     ring.rotation.x=-Math.PI/2; ring.position.y=0.05; g.add(ring);
     b.radius=15; b.light=light; b.crystal=crystal;
   } else if(type==='watchtower'){
     const base=new THREE.Mesh(new THREE.BoxGeometry(1.4,3.2,1.4),
-      new THREE.MeshStandardMaterial({color:0x3a2a18,roughness:0.9}));
+      new THREE.MeshStandardMaterial({color:0x4a3a20,roughness:0.9}));
     base.position.y=1.6; g.add(base);
     const top=new THREE.Mesh(new THREE.BoxGeometry(2.0,0.3,2.0),
-      new THREE.MeshStandardMaterial({color:0x4a3a28,roughness:0.9}));
+      new THREE.MeshStandardMaterial({color:0x5a4a30,roughness:0.9}));
     top.position.y=3.35; g.add(top);
     const turret=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.3,0.5,6),
-      new THREE.MeshStandardMaterial({color:0x777168}));
+      new THREE.MeshStandardMaterial({color:0x888178}));
     turret.position.y=3.8; g.add(turret);
     b.radius=15; b.towerCd=0;
   } else if(type==='greenhouse'){
     const glass=new THREE.Mesh(new THREE.BoxGeometry(3,2.5,4),
-      new THREE.MeshStandardMaterial({color:0xa0d8ff,transparent:true,opacity:0.35,
+      new THREE.MeshStandardMaterial({color:0xb0d8ff,transparent:true,opacity:0.4,
         roughness:0.2,metalness:0.1}));
     glass.position.y=1.25; g.add(glass);
     const frame=new THREE.Mesh(new THREE.BoxGeometry(3.1,0.1,4.1),
-      new THREE.MeshStandardMaterial({color:0x4a3a28}));
+      new THREE.MeshStandardMaterial({color:0x5a4a30}));
     frame.position.y=2.55; g.add(frame);
     b.radius=6; b.greenhouse=true;
   } else if(type==='vault'){
     const box=new THREE.Mesh(new THREE.BoxGeometry(2,1.8,2),
-      new THREE.MeshStandardMaterial({color:0x6a6a6e,roughness:0.5,metalness:0.5}));
+      new THREE.MeshStandardMaterial({color:0x8a8a8e,roughness:0.5,metalness:0.5}));
     box.position.y=0.9; g.add(box);
     const lid=new THREE.Mesh(new THREE.BoxGeometry(2.1,0.15,2.1),
-      new THREE.MeshStandardMaterial({color:0x8a8a8e,roughness:0.4,metalness:0.6}));
+      new THREE.MeshStandardMaterial({color:0xa8a8ae,roughness:0.4,metalness:0.6}));
     lid.position.y=1.85; g.add(lid);
     b.radius=3; b.vault=true;
   }
@@ -1480,15 +1473,15 @@ function updateProjectiles(dt){
 }
 
 /* ================================================================
-   ENEMY AI
+   ENEMY AI — ШИНЭ: өдөр ч олон дайсан
    ================================================================ */
-let spawnTimer=4;
+let spawnTimer=2;
 function updateEnemies(dt,day){
   spawnTimer-=dt;
   const night=day<0.4;
-  const maxEnemies=night?8:3;
+  const maxEnemies=night?10:7;   // ★ өдөр ч 7 дайсан
   if(spawnTimer<=0&&enemies.length<maxEnemies){
-    spawnTimer=night?4:10;
+    spawnTimer=night?3:5;        // ★ өдөр ч 5 секунд тутам
     const roll=Math.random();
     let type;
     if(night){
@@ -1499,10 +1492,12 @@ function updateEnemies(dt,day){
       else if(roll<0.9) type='screamer';
       else type='stitcher';
     } else {
-      if(roll<0.5) type='lumber';
-      else if(roll<0.85) type='crawler';
-      else if(roll<0.95) type='stalker';
-      else type='screamer';
+      // ★ Өдөр ч олон төрлийн дайсан
+      if(roll<0.30) type='lumber';
+      else if(roll<0.55) type='crawler';
+      else if(roll<0.78) type='stalker';
+      else if(roll<0.92) type='screamer';
+      else type='stitcher';
     }
     spawnEnemy(type);
   }
@@ -1513,7 +1508,6 @@ function updateEnemies(dt,day){
     const dist=Math.hypot(dx,dz);
     if(e.hitFlash>0) e.hitFlash-=dt;
 
-    // Hearth safe zone
     let inSafe=false;
     for(const b of buildings){
       if(b.type==='hearth'&&Math.hypot(b.x-e.pos.x,b.z-e.pos.z)<b.radius){
@@ -1532,7 +1526,6 @@ function updateEnemies(dt,day){
       continue;
     }
 
-    // Light avoidance
     let inLight=false;
     for(const b of buildings){
       if((b.type==='lantern'||b.type==='campfire')&&b.light){
@@ -1551,7 +1544,6 @@ function updateEnemies(dt,day){
       continue;
     }
 
-    // Screamer
     if(e.type==='screamer'){
       const hearing=dist<40&&noiseLevel>0.15;
       if(hearing&&dist<8){
@@ -1570,7 +1562,6 @@ function updateEnemies(dt,day){
       }
     }
 
-    // Flesh Stitcher drain
     if(e.type==='stitcher'&&dist<4){
       e.drainT-=dt;
       if(e.drainT<=0){
@@ -1581,7 +1572,6 @@ function updateEnemies(dt,day){
       }
     }
 
-    // Chase
     const chasing=dist<40||e.summoned>performance.now();
     if(chasing){
       if(dist>1.5){
@@ -1664,21 +1654,31 @@ function updateSanity(dt,day){
 }
 
 /* ================================================================
-   DAY / NIGHT — BRIGHTER
+   DAY / NIGHT — 60% өдөр, 40% шөнө, гэрэлтэй
    ================================================================ */
-let timeOfDay=0.15, dayCount=1, siegeDay=3;
-const DAY_LEN=200;
+let timeOfDay=0.10, dayCount=1, siegeDay=3;
+const DAY_LEN=300;   // Нийт 5 мин: 3 мин өдөр, 2 мин шөнө
+
 const SKY={
-  nightTop:new THREE.Color(0x1a1f38), nightMid:new THREE.Color(0x2a2540), nightBot:new THREE.Color(0x4a2a3a),
-  dawnTop:new THREE.Color(0x2a2535), dawnMid:new THREE.Color(0x6a3540), dawnBot:new THREE.Color(0xd88060),
-  dayTop:new THREE.Color(0x4a6080), dayMid:new THREE.Color(0x90a8b8), dayBot:new THREE.Color(0xc8d0d8),
+  nightTop:new THREE.Color(0x2a3050), nightMid:new THREE.Color(0x3a3558), nightBot:new THREE.Color(0x6a4050),
+  dawnTop:new THREE.Color(0x3a3548), dawnMid:new THREE.Color(0x7a4550), dawnBot:new THREE.Color(0xe89070),
+  dayTop:new THREE.Color(0x506890), dayMid:new THREE.Color(0xa0b8c8), dayBot:new THREE.Color(0xd8e0e8),
 };
+
 function updateDayNight(dt){
   timeOfDay+=dt/DAY_LEN;
   if(timeOfDay>=1){ timeOfDay-=1; dayCount++;
     if(dayCount>=siegeDay){ triggerSiege(); siegeDay+=5; }
   }
-  const ang=(timeOfDay-0.25)*Math.PI*2;
+
+  // ★ Өдөр 60%, шөнө 40%
+  const DAY_FRACTION=0.6;
+  let ang;
+  if(timeOfDay<DAY_FRACTION){
+    ang=(timeOfDay/DAY_FRACTION)*Math.PI;
+  } else {
+    ang=Math.PI+((timeOfDay-DAY_FRACTION)/(1-DAY_FRACTION))*Math.PI;
+  }
   const sunH=Math.sin(ang), sunX=Math.cos(ang);
   sun.position.set(sunX*100,sunH*100+20,40);
 
@@ -1704,12 +1704,11 @@ function updateDayNight(dt){
   skyUniforms.bottomColor.value.copy(botC);
 
   const day=clamp(sunH*1.8+0.25,0,1);
-  // ★ ГЭРЭЛ 2× НЭМЭГДҮҮЛСЭН
-  sun.intensity=0.4+day*1.2;
-  hemi.intensity=0.6+day*0.6;
-  ambient.intensity=0.35+day*0.3;
+  // ★ ГЭРЭЛ ДАХИН НЭМЭГДҮҮЛСЭН
+  sun.intensity=0.65+day*1.6;
+  hemi.intensity=1.0+day*0.7;
+  ambient.intensity=0.65+day*0.35;
   scene.fog.color.copy(midC);
-  // Манан холдуулсан
   scene.fog.near=15+day*10;
   scene.fog.far=80+day*70;
   starMat.opacity=clamp(1-day*1.6,0,1);
@@ -1890,12 +1889,13 @@ function startGame(){
   player.everBuiltHearth=false; player.everHiredNPC=false;
   player.everBuiltTower=false; player.everScreamedAt=false;
   player.siegesSurvived=0;
-  dayCount=1; siegeDay=3;
+  dayCount=1; siegeDay=3; timeOfDay=0.10;
 
   enemies.forEach(e=>scene.remove(e.mesh)); enemies.length=0;
   buildings.forEach(b=>scene.remove(b.mesh)); buildings.length=0;
   crops.forEach(c=>scene.remove(c.mesh)); crops.length=0;
   npcs.forEach(n=>scene.remove(n.mesh)); npcs.length=0;
+  projectiles.forEach(p=>scene.remove(p.mesh)); projectiles.length=0;
 
   $('menu').classList.add('hidden');
   $('dead').classList.add('hidden');
