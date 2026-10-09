@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<title>DARKWOOD: Хаягдсан ой</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#000; overflow:hidden; font-family:'Courier New',monospace; color:#c9c9c9; user-select:none; }
+  #game { display:block; cursor:crosshair; }
+  .overlay { position:fixed; pointer-events:none; }
+
+  #hud { top:16px; left:16px; }
+  .bar { width:220px; height:14px; background:rgba(0,0,0,0.7); border:1px solid #333; margin-bottom:6px; position:relative; overflow:hidden; }
+  .bar .fill { height:100%; transition:width .1s; }
+  .bar .label { position:absolute; left:6px; top:0; font-size:10px; line-height:14px; text-shadow:1px 1px 0 #000; z-index:2; }
+  .hp .fill { background:#8b1a1a; }
+  .sp .fill { background:#4a7a3a; }
+  .fear .fill { background:#6a3a8a; }
+  .infect .fill { background:#8a7a1a; }
+
+  #hotbar { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:flex; gap:4px; pointer-events:none; }
+  .slot { width:48px; height:48px; background:rgba(10,10,10,0.85); border:2px solid #333; display:flex; align-items:center; justify-content:center; font-size:10px; position:relative; }
+  .slot.active { border-color:#a8a8a8; box-shadow:0 0 10px rgba(200,200,200,0.5); }
+  .slot .num { position:absolute; top:2px; left:4px; font-size:9px; color:#666; }
+  .slot .ico { font-size:20px; }
+
+  #log { position:fixed; bottom:90px; left:16px; font-size:12px; line-height:1.5; text-shadow:1px 1px 0 #000; max-width:400px; }
+  .msg { opacity:0.95; margin-bottom:2px; }
+  .msg.warn { color:#d0a040; }
+  .msg.danger { color:#d04040; }
+  .msg.good { color:#60a060; }
+
+  .panel { position:fixed; background:rgba(5,5,5,0.96); border:2px solid #444; padding:16px; display:none; pointer-events:auto; z-index:50; }
+  .panel.open { display:block; }
+  #craftPanel { top:50%; left:50%; transform:translate(-50%,-50%); width:520px; max-height:80vh; overflow-y:auto; }
+  .recipe { padding:10px; border-bottom:1px solid #222; cursor:pointer; }
+  .recipe:hover { background:#1a1a1a; }
+  .recipe.locked { opacity:0.35; cursor:not-allowed; }
+  .recipe .name { font-weight:bold; color:#b0b0b0; font-size:13px; }
+  .recipe .cost { font-size:11px; color:#777; margin-top:2px; }
+  .recipe .desc { font-size:10px; color:#666; margin-top:2px; font-style:italic; }
+
+  #title { position:fixed; inset:0; background:#000; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; z-index:100; }
+  #title h1 { font-size:56px; letter-spacing:10px; color:#8a1a1a; text-shadow:0 0 30px rgba(200,0,0,0.4); margin-bottom:6px; }
+  #title h2 { font-size:14px; color:#666; letter-spacing:6px; margin-bottom:40px; }
+  #title .tag { font-style:italic; color:#888; margin-bottom:50px; font-size:14px; }
+  #title button { background:none; border:2px solid #555; color:#ccc; padding:14px 40px; font-size:14px; letter-spacing:5px; cursor:pointer; font-family:inherit; }
+  #title button:hover { border-color:#a8a8a8; color:#fff; background:rgba(255,255,255,0.03); }
+  #title .keys { margin-top:50px; font-size:11px; color:#555; line-height:2; letter-spacing:1px; }
+
+  #death { position:fixed; inset:0; background:rgba(20,0,0,0.94); display:none; align-items:center; justify-content:center; flex-direction:column; text-align:center; z-index:100; }
+  #death.open { display:flex; }
+  #death h1 { font-size:60px; color:#8a1a1a; letter-spacing:10px; margin-bottom:20px; text-shadow:0 0 40px rgba(200,0,0,0.5); }
+  #death p { color:#888; margin-bottom:30px; font-size:14px; letter-spacing:2px; }
+  #death button { background:none; border:2px solid #555; color:#ccc; padding:14px 40px; font-family:inherit; cursor:pointer; letter-spacing:4px; font-size:13px; }
+  #death button:hover { border-color:#a8a8a8; color:#fff; }
+
+  .truth { position:fixed; top:16px; right:16px; font-size:12px; color:#888; text-align:right; line-height:1.8; letter-spacing:1px; }
+  .truth .val { color:#c9c9c9; font-weight:bold; }
+
+  #interact { position:fixed; bottom:100px; left:50%; transform:translateX(-50%); font-size:12px; color:#ddd; background:rgba(0,0,0,0.7); padding:6px 14px; border:1px solid #444; display:none; letter-spacing:2px; }
+  #interact.open { display:block; }
+
+  #buildHint { position:fixed; top:50%; left:50%; transform:translate(-50%, 30px); font-size:12px; color:#a08040; background:rgba(0,0,0,0.7); padding:6px 14px; border:1px solid #555; display:none; letter-spacing:2px; }
+  #buildHint.open { display:block; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="overlay">
+  <div class="bar hp"><div class="fill" id="hpBar"></div><div class="label">HEALTH</div></div>
+  <div class="bar sp"><div class="fill" id="spBar"></div><div class="label">STAMINA</div></div>
+  <div class="bar fear"><div class="fill" id="fearBar"></div><div class="label">FEAR</div></div>
+  <div class="bar infect"><div class="fill" id="infBar"></div><div class="label">INFECTION</div></div>
+</div>
+
+<div class="truth">
+  <div>TRUTH: <span class="val" id="truthInfo">0 / 3</span></div>
+  <div>DAY <span class="val" id="dayInfo">1</span> — <span class="val" id="timeInfo">DAY</span></div>
+  <div>ARM: <span class="val" id="armInfo">EMPTY</span></div>
+</div>
+
+<div id="log" class="overlay"></div>
+<div id="hotbar"></div>
+<div id="interact"></div>
+<div id="buildHint"></div>
+
+<div id="craftPanel" class="panel">
+  <h3 style="margin-bottom:12px; color:#aaa; letter-spacing:4px; font-size:14px;">URLAH — [C] хаах</h3>
+  <div id="recipes"></div>
+</div>
+
+<div id="title">
+  <h1>DARKWOOD</h1>
+  <h2>ХАЯГДСАН ОЙ</h2>
+  <div class="tag">"Өдөр нь амьд үлд. Шөнө нь олз болохгүй бай."</div>
+  <button id="startBtn">ЭХЛЭХ</button>
+  <div class="keys">
+    WASD — хөдлөх &nbsp;•&nbsp; SPACE / CLICK — цохих<br>
+    E — авах / шинжлэх &nbsp;•&nbsp; B — барих &nbsp;•&nbsp; C — урлах<br>
+    Q — гар солих &nbsp;•&nbsp; 1-0 — зэвсэг солих
+  </div>
+</div>
+
+<div id="death">
+  <h1>ЧИ ҮХЭВ</h1>
+  <p id="deathMsg">Ой чамайг авлаа.</p>
+  <button id="restartBtn">ДАХИН ЭХЛЭХ</button>
+</div>
+
+<script>
+// ============================================================
+// DARKWOOD: Хаягдсан ой
+// ============================================================
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0;
+function resize(){ W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+addEventListener('resize', resize); resize();
+
+// ==== Helpers ====
+const rand = (a,b) => a + Math.random()*(b-a);
+const randi = (a,b) => Math.floor(rand(a,b));
+const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+const lerp = (a,b,t) => a+(b-a)*t;
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+
+// ==== Constants ====
+const WORLD = 2400;
+const CYCLE_LEN = 90;         // seconds per full day+night
+const DAY_RATIO = 0.55;       // 55% day, 45% night
+const INTERACT_RANGE = 70;
+const NIGHT_START = DAY_RATIO;
+const TRUTH_NEEDED = 3;
+
+// ==== Game State ====
+const G = {
+  mode: 'menu', // menu | play | dead | won
+  day: 1,
+  cycleT: 0,
+  isNight: false,
+  truth: 0,
+  buildMode: null, // 'wall' | 'spike' | null
+  craftOpen: false,
+  mobSpawnTimer: 0,
+  deathMsg: '',
+};
+
+// ==== Player ====
+const P = {
+  x: WORLD/2, y: WORLD/2,
+  r: 14,
+  sp: 100, maxSp: 100,
+  hp: 100, maxHp: 100,
+  fear: 0, maxFear: 100,
+  inf: 0,
+  vx:0, vy:0,
+  facing: 0,
+  atkCd: 0, atkAnim: 0,
+  hurtFlash: 0,
+  arm: 'empty',
+  armsOwned: ['empty'],
+  inv: { wood:0, stone:0, scrap:0, bone:0, tissue:0, herb:0, cloth:0, chitin:0 },
+  hotbar: ['blade',null,null,null,null,null,null,null,null,null],
+  hotSel: 0,
+};
+
+const ARM_DATA = {
+  empty:    { name:'EMPTY',    dmg:1.0, color:'#666',   ability:null },
+  muscle:   { name:'MUSCLE',   dmg:2.0, color:'#a04040', ability:'wallbreak' },
+  chitin:   { name:'CHITIN',   dmg:1.6, color:'#8040a0', ability:'bleed' },
+  uv:       { name:'UV SCAN',  dmg:1.1, color:'#40a080', ability:'detect' },
+};
+
+// ==== World ====
+const W_ = {
+  trees: [], rocks: [], scraps: [], bones: [], herbs: [], cloths: [],
+  labs: [], towers: [],
+  walls: [], spikes: [],
+  drops: [],
+};
+
+// ==== Mobs ====
+const mobs = [];
+
+// ==== Particles ====
+const parts = [];
+
+// ==== Init world ====
+function genWorld(){
+  W_.trees.length = 0; W_.rocks.length = 0; W_.scraps.length = 0;
+  W_.bones.length = 0; W_.herbs.length = 0; W_.cloths.length = 0;
+  W_.labs.length = 0; W_.towers.length = 0;
+  W_.walls.length = 0; W_.spikes.length = 0; W_.drops.length = 0;
+  mobs.length = 0; parts.length = 0;
+
+  // Trees — dense forest
+  for(let i=0;i<500;i++){
+    W_.trees.push({
+      x: rand(80, WORLD-80), y: rand(80, WORLD-80),
+      r: rand(18,30),
+      seed: Math.random()*1000,
+    });
+  }
+  // Rocks
+  for(let i=0;i<120;i++){
+    W_.rocks.push({ x: rand(60,WORLD-60), y: rand(60,WORLD-60), r: rand(14,24) });
+  }
+  // Scrap piles
+  for(let i=0;i<100;i++){
+    W_.scraps.push({ x: rand(60,WORLD-60), y: rand(60,WORLD-60), r: 14 });
+  }
+  // Bone piles (rare)
+  for(let i=0;i<60;i++){
+    W_.bones.push({ x: rand(60,WORLD-60), y: rand(60,WORLD-60), r: 12 });
+  }
+  // Herbs
+  for(let i=0;i<80;i++){
+    W_.herbs.push({ x: rand(60,WORLD-60), y: rand(60,WORLD-60), r: 10 });
+  }
+  // Cloth (near "cabins" — random spots)
+  for(let i=0;i<40;i++){
+    W_.cloths.push({ x: rand(60,WORLD-60), y: rand(60,WORLD-60), r: 12 });
+  }
+  // Labs (truth sources) — scattered
+  for(let i=0;i<4;i++){
+    W_.labs.push({
+      x: rand(200, WORLD-200), y: rand(200, WORLD-200),
+      r: 40, found: false,
+    });
+  }
+  // Radio towers
+  for(let i=0;i<3;i++){
+    W_.towers.push({
+      x: rand(200, WORLD-200), y: rand(200, WORLD-200),
+      r: 30, found: false,
+    });
+  }
+  // Ensure player spawn is clear
+  P.x = WORLD/2; P.y = WORLD/2;
+  clearAround(P.x, P.y, 200);
+}
+
+function clearAround(x,y,rad){
+  const filter = arr => arr.filter(o => dist(o,{x,y}) > rad);
+  W_.trees = filter(W_.trees);
+  W_.rocks = filter(W_.rocks);
+  W_.scraps = filter(W_.scraps);
+  W_.bones = filter(W_.bones);
+  W_.labs = filter(W_.labs);
+  W_.towers = filter(W_.towers);
+}
+
+// ==== Messages ====
+function log(text, cls=''){
+  const el = document.createElement('div');
+  el.className = 'msg ' + cls;
+  el.textContent = text;
+  const box = document.getElementById('log');
+  box.appendChild(el);
+  setTimeout(()=> el.remove(), 6000);
+  while(box.children.length > 6) box.firstChild.remove();
+}
+
+// ==== Input ====
+const keys = {};
+let mouse = { x:W/2, y:H/2, down:false, worldX:0, worldY:0 };
+
+addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  handleKey(e.key.toLowerCase());
+});
+addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+addEventListener('mousemove', e => {
+  mouse.x = e.clientX; mouse.y = e.clientY;
+});
+addEventListener('mousedown', e => {
+  if(G.mode !== 'play') return;
+  mouse.down = true;
+  if(e.button === 0){
+    if(G.craftOpen) return;
+    if(G.buildMode) tryPlaceBuilding();
+    else doAttack();
+  }
+});
+addEventListener('mouseup', () => { mouse.down = false; });
+addEventListener('contextmenu', e => e.preventDefault());
+
+function handleKey(k){
+  if(G.mode !== 'play') return;
+  if(k === 'c'){ toggleCraft(); }
+  if(k === 'b'){ cycleBuild(); }
+  if(k === 'q'){ cycleArm(); }
+  if(k === 'e'){ tryInteract(); }
+  if(k >= '1' && k <= '9'){ P.hotSel = parseInt(k)-1; updateHotbar(); }
+  if(k === '0'){ P.hotSel = 9; updateHotbar(); }
+  if(k === ' '){ doAttack(); }
+}
+
+// ==== Day/Night ====
+function updateDayNight(dt){
+  G.cycleT += dt / CYCLE_LEN;
+  if(G.cycleT >= 1){
+    G.cycleT = 0;
+    G.day++;
+    log(`Өдөр ${G.day} — үүр цайв.`, 'good');
+  }
+  const wasNight = G.isNight;
+  G.isNight = G.cycleT > NIGHT_START;
+  if(!wasNight && G.isNight){
+    log('Нар жаргав... ой амилав.', 'danger');
+  }
+  if(wasNight && !G.isNight){
+    log('Үүр цайв. Мангасууд буцав.', 'good');
+  }
+}
+
+// ==== Player update ====
+function updatePlayer(dt){
+  let dx = 0, dy = 0;
+  if(keys['w'] || keys['arrowup']) dy -= 1;
+  if(keys['s'] || keys['arrowdown']) dy += 1;
+  if(keys['a'] || keys['arrowleft']) dx -= 1;
+  if(keys['d'] || keys['arrowright']) dx += 1;
+
+  const len = Math.hypot(dx,dy);
+  let speed = 2.6;
+  const sprinting = keys['shift'] && P.sp > 0;
+  if(sprinting){ speed = 4.2; P.sp = Math.max(0, P.sp - 18*dt); }
+  else { P.sp = Math.min(P.maxSp, P.sp + 12*dt); }
+
+  if(len > 0){
+    dx /= len; dy /= len;
+    const step = speed * 60 * dt;
+    const nx = P.x + dx*step;
+    const ny = P.y + dy*step;
+    if(!collideWall(nx, P.y)) P.x = nx;
+    if(!collideWall(P.x, ny)) P.y = ny;
+    P.x = clamp(P.x, 20, WORLD-20);
+    P.y = clamp(P.y, 20, WORLD-20);
+  }
+
+  // Face mouse (convert screen to world)
+  const camX = P.x - W/2, camY = P.y - H/2;
+  mouse.worldX = mouse.x + camX;
+  mouse.worldY = mouse.y + camY;
+  P.facing = Math.atan2(mouse.worldY - P.y, mouse.worldX - P.x);
+
+  // Attack cooldown
+  if(P.atkCd > 0) P.atkCd -= dt;
+  if(P.atkAnim > 0) P.atkAnim -= dt;
+  if(P.hurtFlash > 0) P.hurtFlash -= dt;
+
+  // Fear decay over time (slow) — increases at night
+  if(G.isNight){
+    P.fear = Math.min(P.maxFear, P.fear + 1.5*dt);
+  } else {
+    P.fear = Math.max(0, P.fear - 3*dt);
+  }
+
+  // Infection slowly rises if not treated
+  if(P.inf > 0){
+    P.inf = Math.min(100, P.inf + 0.3*dt);
+    if(P.inf >= 100) killPlayer('Халдвар чамайг авлаа.');
+  }
+
+  // Fear damage
+  if(P.fear >= 100){
+    P.hp = Math.max(0, P.hp - 3*dt);
+    if(P.hp <= 0) killPlayer('Айдас чамайг устгав.');
+  }
+
+  // Escape check — north edge
+  if(P.y < 30 && G.truth >= TRUTH_NEEDED){
+    winGame();
+  }
+}
+
+function collideWall(x,y){
+  for(const w of W_.walls){
+    if(Math.abs(x - w.x) < 28 && Math.abs(y - w.y) < 28) return true;
+  }
+  return false;
+}
+
+// ==== Attack ====
+function doAttack(){
+  if(P.atkCd > 0) return;
+  P.atkCd = 0.5;
+  P.atkAnim = 0.25;
+
+  const dmg = 25 * ARM_DATA[P.arm].dmg;
+  const range = 70;
+
+  // Hit mobs in arc
+  for(const m of mobs){
+    const d = dist(m, P);
+    if(d > range + m.r) continue;
+    const ang = Math.atan2(m.y - P.y, m.x - P.x);
+    let diff = Math.abs(ang - P.facing);
+    if(diff > Math.PI) diff = Math.PI*2 - diff;
+    if(diff < Math.PI/3){
+      damageMob(m, dmg);
+    }
+  }
+
+  // Hit trees/rocks for resources (bonus)
+  // (skip — resources gathered by E)
+
+  // Particles
+  for(let i=0;i<6;i++){
+    parts.push({
+      x: P.x + Math.cos(P.facing)*40,
+      y: P.y + Math.sin(P.facing)*40,
+      vx: rand(-30,30), vy: rand(-30,30),
+      life: 0.3, maxLife: 0.3, color:'#ddd',
+    });
+  }
+}
+
+// ==== Interact ====
+function tryInteract(){
+  // Find nearest interactable
+  let best = null, bestD = INTERACT_RANGE;
+  const check = (arr, type) => {
+    for(const o of arr){
+      const d = dist(o, P);
+      if(d < bestD){ best = {obj:o, type}; bestD = d; }
+    }
+  };
+  check(W_.trees, 'tree');
+  check(W_.rocks, 'rock');
+  check(W_.scraps, 'scrap');
+  check(W_.bones, 'bone');
+  check(W_.herbs, 'herb');
+  check(W_.cloths, 'cloth');
+  check(W_.labs, 'lab');
+  check(W_.towers, 'tower');
+
+  if(!best) return;
+
+  const o = best.obj;
+  switch(best.type){
+    case 'tree':
+      P.inv.wood += randi(2,4);
+      log('+ Мод', 'good');
+      removeFrom(W_.trees, o); break;
+    case 'rock':
+      P.inv.stone += randi(1,3);
+      log('+ Чулуу', 'good');
+      removeFrom(W_.rocks, o); break;
+    case 'scrap':
+      P.inv.scrap += randi(1,3);
+      log('+ Хаягдал', 'good');
+      removeFrom(W_.scraps, o); break;
+    case 'bone':
+      P.inv.bone += randi(1,2);
+      log('+ Яс', 'good');
+      removeFrom(W_.bones, o); break;
+    case 'herb':
+      P.inv.herb += randi(1,2);
+      log('+ Өвс', 'good');
+      removeFrom(W_.herbs, o); break;
+    case 'cloth':
+      P.inv.cloth += randi(1,2);
+      log('+ Даавуу', 'good');
+      removeFrom(W_.cloths, o); break;
+    case 'lab':
+      if(!o.found){
+        o.found = true;
+        G.truth++;
+        log(`ЛАБОРАТОРИ — Үнэн ${G.truth}/${TRUTH_NEEDED}`, 'good');
+        log('"Объект 47. Чи санаж байна уу?"', 'warn');
+        updateTruth();
+      } else {
+        log('Энэ лабораторийг аль хэдийн шинжилсэн.', '');
+      }
+      break;
+    case 'tower':
+      if(!o.found){
+        o.found = true;
+        G.truth++;
+        log(`РАДИО ЦАМХАГ — Үнэн ${G.truth}/${TRUTH_NEEDED}`, 'good');
+        log('"Хойд зүг рүү яв. Гарах гарц тэнд байна."', 'warn');
+        updateTruth();
+      } else {
+        log('Радио чимээгүй байна.', '');
+      }
+      break;
+  }
+}
+
+function removeFrom(arr, o){
+  const i = arr.indexOf(o);
+  if(i >= 0) arr.splice(i,1);
+}
+
+// ==== Crafting ====
+const RECIPES = [
+  { id:'bandage', name:'Боолт', cost:{cloth:2}, desc:'+30 HP', craft(){
+      P.hp = Math.min(P.maxHp, P.hp+30); log('Боолт хийв. +30 HP','good'); }},
+  { id:'antiseptic', name:'Антисептик', cost:{herb:2, cloth:1}, desc:'-40 халдвар', craft(){
+      P.inf = Math.max(0, P.inf-40); log('Антисептик хийв.','good'); }},
+  { id:'muscleArm', name:'Biospliced Muscle Arm', cost:{tissue:5, bone:3}, desc:'x2 melee + wall break',
+    craft(){ unlockArm('muscle'); }},
+  { id:'chitinArm', name:'Chitin Blade Arm', cost:{chitin:8, bone:4}, desc:'Bleed damage',
+    craft(){ unlockArm('chitin'); }},
+  { id:'uvArm', name:'UV Scanner Arm', cost:{scrap:4, herb:3}, desc:'Detect hidden entities',
+    craft(){ unlockArm('uv'); }},
+  { id:'wall', name:'Модон хана (T1)', cost:{wood:6}, desc:'Барих — хамгаалалт',
+    craft(){ P.inv.wood += 6; log('Хана барих горимд шилжүүлэв. [B]','good'); }},
+];
+
+function canAfford(r){
+  for(const k in r.cost){ if((P.inv[k]||0) < r.cost[k]) return false; }
+  return true;
+}
+
+function doCraft(r){
+  if(!canAfford(r)) return;
+  for(const k in r.cost) P.inv[k] -= r.cost[k];
+  r.craft();
+  renderRecipes();
+}
+
+function unlockArm(id){
+  if(!P.armsOwned.includes(id)) P.armsOwned.push(id);
+  P.arm = id;
+  log(`Гар модуль: ${ARM_DATA[id].name}`, 'good');
+  updateArm();
+}
+
+function toggleCraft(){
+  G.craftOpen = !G.craftOpen;
+  document.getElementById('craftPanel').classList.toggle('open', G.craftOpen);
+  if(G.craftOpen) renderRecipes();
+}
+
+function renderRecipes(){
+  const box = document.getElementById('recipes');
+  box.innerHTML = '';
+  for(const r of RECIPES){
+    const el = document.createElement('div');
+    el.className = 'recipe' + (canAfford(r) ? '' : ' locked');
+    const costStr = Object.entries(r.cost).map(([k,v]) => `${k} ${P.inv[k]||0}/${v}`).join(', ');
+    el.innerHTML = `<div class="name">${r.name}</div><div class="cost">${costStr}</div><div class="desc">${r.desc}</div>`;
+    el.onclick = () => doCraft(r);
+    box.appendChild(el);
+  }
+}
+
+// ==== Arm cycle ====
+function cycleArm(){
+  const idx = P.armsOwned.indexOf(P.arm);
+  P.arm = P.armsOwned[(idx+1) % P.armsOwned.length];
+  log(`Гар: ${ARM_DATA[P.arm].name}`);
+  updateArm();
+}
+
+// ==== Building ====
+function cycleBuild(){
+  if(G.buildMode === null) G.buildMode = 'wall';
+  else if(G.buildMode === 'wall') G.buildMode = 'spike';
+  else G.buildMode = null;
+  const hint = document.getElementById('buildHint');
+  if(G.buildMode){
+    hint.classList.add('open');
+    hint.textContent = `БАРИХ: ${G.buildMode === 'wall' ? 'ХАНА (wood 6)' : 'SPIKE (wood 4, bone 2)'} — [B] солих, CLICK байрлуулах`;
+  } else {
+    hint.classList.remove('open');
+  }
+}
+
+function tryPlaceBuilding(){
+  if(G.buildMode === 'wall'){
+    if(P.inv.wood < 6){ log('Мод хүрэлцэхгүй (6 хэрэгтэй)','warn'); return; }
+    P.inv.wood -= 6;
+    W_.walls.push({ x: P.x + Math.cos(P.facing)*50, y: P.y + Math.sin(P.facing)*50, r: 28, hp: 100 });
+    log('Хана барив.','good');
+  } else if(G.buildMode === 'spike'){
+    if(P.inv.wood < 4 || P.inv.bone < 2){ log('Материал хүрэлцэхгүй','warn'); return; }
+    P.inv.wood -= 4; P.inv.bone -= 2;
+    W_.spikes.push({ x: P.x + Math.cos(P.facing)*50, y: P.y + Math.sin(P.facing)*50, r: 20, cd: 0 });
+    log('Spike trap байрлуулав.','good');
+  }
+}
+
+// ==== Mobs ====
+function spawnMob(type){
+  // Spawn away from player
+  let x, y, tries = 0;
+  do {
+    const a = rand(0, Math.PI*2);
+    const d = rand(500, 900);
+    x = P.x + Math.cos(a)*d;
+    y = P.y + Math.sin(a)*d;
+    tries++;
+  } while((x < 60 || x > WORLD-60 || y < 60 || y > WORLD-60) && tries < 20);
+
+  const base = {
+    x, y, vx:0, vy:0, r: 16,
+    hp: 60, maxHp: 60, dmg: 12, speed: 1.2,
+    type, atkCd: 0, fear: 0,
+  };
+  switch(type){
+    case 'deer':   Object.assign(base, { r:14, hp:40,  maxHp:40,  speed:2.2, dmg:0,  passive:true }); break;
+    case 'raven':  Object.assign(base, { r:10, hp:20,  maxHp:20,  speed:3.0, dmg:0,  passive:true }); break;
+    case 'crawler':Object.assign(base, { r:14, hp:50,  maxHp:50,  speed:2.6, dmg:14 }); break;
+    case 'stalker':Object.assign(base, { r:22, hp:120, maxHp:120, speed:0.9, dmg:20, fearDrain: 8 }); break;
+    case 'mimic':  Object.assign(base, { r:18, hp:80,  maxHp:80,  speed:1.0, dmg:16, voiceTimer: rand(4,8) }); break;
+    case 'gorilla':Object.assign(base, { r:32, hp:280, maxHp:280, speed:1.0, dmg:35, wallBreak:true }); break;
+  }
+  mobs.push(base);
+}
+
+function updateMobs(dt){
+  // Spawn logic
+  G.mobSpawnTimer -= dt;
+  if(G.mobSpawnTimer <= 0){
+    G.mobSpawnTimer = G.isNight ? 3.5 : 7;
+    if(G.isNight){
+      // Night: spawn hostile
+      const roll = Math.random();
+      if(roll < 0.45) spawnMob('crawler');
+      else if(roll < 0.70) spawnMob('stalker');
+      else if(roll < 0.88) spawnMob('mimic');
+      else spawnMob('gorilla');
+    } else {
+      // Day: passive
+      if(Math.random() < 0.7) spawnMob('deer');
+      else spawnMob('raven');
+    }
+  }
+
+  for(let i = mobs.length-1; i >= 0; i--){
+    const m = mobs[i];
+    const d = dist(m, P);
+
+    // Despawn if far
+    if(d > 1600){ mobs.splice(i,1); continue; }
+
+    // Passive behavior
+    if(m.passive){
+      if(d < 220){
+        // Flee
+        const ang = Math.atan2(m.y-P.y, m.x-P.x);
+        m.x += Math.cos(ang) * m.speed * 60 * dt;
+        m.y += Math.sin(ang) * m.speed * 60 * dt;
+      } else {
+        // Wander
+        if(!m.wanderT || m.wanderT <= 0){
+          m.wanderT = rand(1,3);
+          m.wanderDir = rand(0, Math.PI*2);
+        }
+        m.wanderT -= dt;
+        m.x += Math.cos(m.wanderDir) * m.speed * 30 * dt;
+        m.y += Math.sin(m.wanderDir) * m.speed * 30 * dt;
+      }
+      m.x = clamp(m.x, 40, WORLD-40);
+      m.y = clamp(m.y, 40, WORLD-40);
+      continue;
+    }
+
+    // Hostile behavior
+    const ang = Math.atan2(P.y-m.y, P.x-m.x);
+
+    if(m.type === 'stalker'){
+      // Keeps distance, drains fear
+      const targetD = 260;
+      if(d > targetD + 40){
+        m.x += Math.cos(ang) * m.speed * 60 * dt;
+        m.y += Math.sin(ang) * m.speed * 60 * dt;
+      } else if(d < targetD - 40){
+        m.x -= Math.cos(ang) * m.speed * 60 * dt;
+        m.y -= Math.sin(ang) * m.speed * 60 * dt;
+      }
+      if(d < 400){
+        P.fear = Math.min(P.maxFear, P.fear + (m.fearDrain||6) * dt);
+      }
+      // If player looks at it (facing angle)
+      const face = Math.atan2(m.y-P.y, m.x-P.x);
+      let diff = Math.abs(face - P.facing);
+      if(diff > Math.PI) diff = Math.PI*2 - diff;
+      if(diff < 0.3 && d < 300){
+        // Player is staring — stalker retreats
+        m.x -= Math.cos(ang) * 3 * 60 * dt;
+        m.y -= Math.sin(ang) * 3 * 60 * dt;
+      }
+    } else if(m.type === 'mimic'){
+      // Slow approach; occasionally plays voice
+      m.voiceTimer -= dt;
+      if(m.voiceTimer <= 0){
+        m.voiceTimer = rand(6,12);
+        if(d < 500){
+          const voices = ['"Хүү минь..."', '"Намайг дага..."', '"Би чамайг аврахаар ирлээ..."'];
+          log(pick(voices), 'danger');
+          P.fear = Math.min(P.maxFear, P.fear + 8);
+        }
+      }
+      if(d < 500){
+        m.x += Math.cos(ang) * m.speed * 60 * dt;
+        m.y += Math.sin(ang) * m.speed * 60 * dt;
+      }
+    } else {
+      // Chase (crawler, gorilla)
+      if(d < 800){
+        m.x += Math.cos(ang) * m.speed * 60 * dt;
+        m.y += Math.sin(ang) * m.speed * 60 * dt;
+      }
+    }
+
+    // Wall break
+    if(m.wallBreak){
+      for(const w of W_.walls){
+        if(dist(m,w) < m.r + w.r + 5){
+          w.hp -= 40 * dt;
+          if(w.hp <= 0){
+            log('Хана эвдэрлээ!', 'danger');
+            removeFrom(W_.walls, w);
+          }
+        }
+      }
+    }
+
+    // Attack player on contact
+    if(m.atkCd > 0) m.atkCd -= dt;
+    if(d < m.r + P.r + 4 && m.dmg > 0){
+      if(m.atkCd <= 0){
+        P.hp -= m.dmg;
+        P.hurtFlash = 0.3;
+        m.atkCd = 0.9;
+        if(P.hp <= 0) killPlayer('Мангас чамайг устгав.');
+      }
+    }
+
+    // Spike trap damage
+    for(const s of W_.spikes){
+      if(dist(m,s) < m.r + s.r + 5 && s.cd <= 0){
+        damageMob(m, 25);
+        s.cd = 1.5;
+      }
+    }
+  }
+
+  // Update spike cooldowns
+  for(const s of W_.spikes) if(s.cd > 0) s.cd -= dt;
+}
+
+function damageMob(m, dmg){
+  m.hp -= dmg;
+  if(m.hp <= 0){
+    const idx = mobs.indexOf(m);
+    if(idx >= 0){
+      mobs.splice(idx,1);
+      // Drop loot
+      if(m.type === 'deer'){ P.inv.tissue += 2; log('+ Мах (tissue)','good'); }
+      if(m.type === 'raven'){ P.inv.cloth += 1; }
+      if(m.type === 'crawler'){ P.inv.bone += 2; P.inv.chitin += 1; }
+      if(m.type === 'stalker'){ P.inv.tissue += 3; }
+      if(m.type === 'mimic'){ P.inv.tissue += 2; }
+      if(m.type === 'gorilla'){ P.inv.tissue += 5; P.inv.bone += 3; }
+      // Particles
+      for(let i=0;i<10;i++){
+        parts.push({
+          x: m.x, y: m.y,
+          vx: rand(-100,100), vy: rand(-100,100),
+          life: 0.5, maxLife: 0.5, color: '#8a1a1a',
+        });
+      }
+    }
+  }
+}
+
+// ==== Kill / Win ====
+function killPlayer(msg){
+  G.mode = 'dead';
+  G.deathMsg = msg;
+  document.getElementById('deathMsg').textContent = msg;
+  document.getElementById('death').classList.add('open');
+}
+
+function winGame(){
+  G.mode = 'won';
+  document.getElementById('death').querySelector('h1').textContent = 'ЧИ ЗУГТАВ';
+  document.getElementById('deathMsg').textContent = 'Чи ойгоос гарлаа. Гэхдээ ой чамайг орхихгүй...';
+  document.getElementById('death').classList.add('open');
+}
+
+// ==== HUD ====
+function updateHUD(){
+  document.getElementById('hpBar').style.width = (P.hp/P.maxHp*100)+'%';
+  document.getElementById('spBar').style.width = (P.sp/P.maxSp*100)+'%';
+  document.getElementById('fearBar').style.width = (P.fear/P.maxFear*100)+'%';
+  document.getElementById('infBar').style.width = (P.inf)+'%';
+  document.getElementById('dayInfo').textContent = G.day;
+  document.getElementById('timeInfo').textContent = G.isNight ? 'NIGHT' : 'DAY';
+}
+
+function updateTruth(){
+  document.getElementById('truthInfo').textContent = `${G.truth} / ${TRUTH_NEEDED}`;
+}
+
+function updateArm(){
+  document.getElementById('armInfo').textContent = ARM_DATA[P.arm].name;
+}
+
+function updateHotbar(){
+  const bar = document.getElementById('hotbar');
+  bar.innerHTML = '';
+  const icons = {
+    blade:'🗡', bandage:'🩹', wall:'🧱', spike:'⚔',
+  };
+  for(let i=0;i<10;i++){
+    const el = document.createElement('div');
+    el.className = 'slot' + (i === P.hotSel ? ' active' : '');
+    const item = P.hotbar[i];
+    el.innerHTML = `<span class="num">${(i+1)%10}</span>` +
+      (item ? `<span class="ico">${icons[item]||'?'}</span>` : '');
+    bar.appendChild(el);
+  }
+}
+
+// ==== Render ====
+function render(){
+  const camX = P.x - W/2;
+  const camY = P.y - H/2;
+
+  // Background — ground tint by day/night
+  const nightAmt = G.isNight ? 1 : 0;
+  const bgR = Math.round(lerp(20, 6, nightAmt));
+  const bgG = Math.round(lerp(28, 8, nightAmt));
+  const bgB = Math.round(lerp(20, 6, nightAmt));
+  ctx.fillStyle = `rgb(${bgR},${bgG},${bgB})`;
+  ctx.fillRect(0,0,W,H);
+
+  ctx.save();
+  ctx.translate(-camX, -camY);
+
+  // Ground grid (subtle)
+  ctx.strokeStyle = G.isNight ? 'rgba(20,30,20,0.4)' : 'rgba(40,60,40,0.3)';
+  ctx.lineWidth = 1;
+  const gx0 = Math.floor(camX/100)*100;
+  const gy0 = Math.floor(camY/100)*100;
+  for(let gx = gx0; gx < camX+W+100; gx += 100){
+    ctx.beginPath(); ctx.moveTo(gx, camY); ctx.lineTo(gx, camY+H); ctx.stroke();
+  }
+  for(let gy = gy0; gy < camY+H+100; gy += 100){
+    ctx.beginPath(); ctx.moveTo(camX, gy); ctx.lineTo(camX+W, gy); ctx.stroke();
+  }
+
+  // Trees
+  for(const t of W_.trees){
+    if(t.x < camX-50 || t.x > camX+W+50 || t.y < camY-50 || t.y > camY+H+50) continue;
+    // Trunk shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath(); ctx.ellipse(t.x+3, t.y+3, t.r, t.r*0.8, 0, 0, Math.PI*2); ctx.fill();
+    // Canopy
+    ctx.fillStyle = G.isNight ? '#0a1a0a' : '#132a13';
+    ctx.beginPath(); ctx.arc(t.x, t.y, t.r, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = G.isNight ? '#0d200d' : '#1a3a1a';
+    ctx.beginPath(); ctx.arc(t.x - t.r*0.3, t.y - t.r*0.3, t.r*0.6, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Rocks
+  for(const r of W_.rocks){
+    if(r.x < camX-50 || r.x > camX+W+50 || r.y < camY-50 || r.y > camY+H+50) continue;
+    ctx.fillStyle = '#3a3a3a';
+    ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#4a4a4a';
+    ctx.beginPath(); ctx.arc(r.x - r.r*0.3, r.y - r.r*0.3, r.r*0.6, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Scrap
+  for(const s of W_.scraps){
+    ctx.fillStyle = '#5a4a3a';
+    ctx.fillRect(s.x-10, s.y-10, 20, 20);
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(s.x-6, s.y-6, 12, 12);
+  }
+
+  // Bones
+  for(const b of W_.bones){
+    ctx.fillStyle = '#c9c9b0';
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#88887a';
+    ctx.beginPath(); ctx.arc(b.x-3, b.y-3, b.r*0.5, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Herbs
+  for(const h of W_.herbs){
+    ctx.fillStyle = '#3a7a3a';
+    ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#60a060';
+    ctx.beginPath(); ctx.arc(h.x-2, h.y-2, h.r*0.4, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Cloth
+  for(const c of W_.cloths){
+    ctx.fillStyle = '#6a5a4a';
+    ctx.fillRect(c.x-8, c.y-8, 16, 16);
+  }
+
+  // Labs
+  for(const l of W_.labs){
+    ctx.fillStyle = l.found ? '#2a1a1a' : '#1a0a0a';
+    ctx.fillRect(l.x-l.r, l.y-l.r, l.r*2, l.r*2);
+    ctx.strokeStyle = l.found ? '#444' : '#8a1a1a';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(l.x-l.r, l.y-l.r, l.r*2, l.r*2);
+    ctx.fillStyle = '#8a1a1a';
+    ctx.font = '10px Courier New';
+    ctx.fillText('LAB', l.x-15, l.y+3);
+  }
+
+  // Towers
+  for(const t of W_.towers){
+    ctx.fillStyle = t.found ? '#333' : '#555';
+    ctx.beginPath();
+    ctx.moveTo(t.x, t.y-t.r);
+    ctx.lineTo(t.x+t.r*0.6, t.y+t.r);
+    ctx.lineTo(t.x-t.r*0.6, t.y+t.r);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = t.found ? '#666' : '#d0a040';
+    ctx.beginPath(); ctx.arc(t.x, t.y-t.r-2, 3, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Walls
+  for(const w of W_.walls){
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(w.x-25, w.y-25, 50, 50);
+    ctx.strokeStyle = '#5a4a2a';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(w.x-25, w.y-25, 50, 50);
+    // HP bar
+    const hp = w.hp/100;
+    ctx.fillStyle = '#000'; ctx.fillRect(w.x-25, w.y-32, 50, 4);
+    ctx.fillStyle = hp > 0.5 ? '#4a7a3a' : hp > 0.25 ? '#a08040' : '#8a1a1a';
+    ctx.fillRect(w.x-25, w.y-32, 50*hp, 4);
+  }
+
+  // Spikes
+  for(const s of W_.spikes){
+    ctx.fillStyle = '#c9c9b0';
+    for(let a=0;a<Math.PI*2;a+=Math.PI/4){
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(s.x + Math.cos(a)*s.r, s.y + Math.sin(a)*s.r);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r*0.6, 0, Math.PI*2); ctx.stroke();
+  }
+
+  // Mobs
+  for(const m of mobs){
+    if(m.x < camX-100 || m.x > camX+W+100 || m.y < camY-100 || m.y > camY+H+100) continue;
+    let color = '#888';
+    if(m.type === 'deer') color = '#8a6a4a';
+    else if(m.type === 'raven') color = '#1a1a1a';
+    else if(m.type === 'crawler') color = '#c9c9b0';
+    else if(m.type === 'stalker') color = '#0a0a0a';
+    else if(m.type === 'mimic') color = '#4a2a5a';
+    else if(m.type === 'gorilla') color = '#5a1a1a';
+
+    // Shadow aura for night mobs
+    if(['stalker','mimic'].includes(m.type)){
+      const grad = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.r*2.5);
+      grad.addColorStop(0, 'rgba(0,0,0,0.9)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(m.x, m.y, m.r*2.5, 0, Math.PI*2); ctx.fill();
+    }
+
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, Math.PI*2); ctx.fill();
+
+    // Eyes for some
+    if(['crawler','stalker','mimic','gorilla'].includes(m.type)){
+      ctx.fillStyle = '#d04040';
+      ctx.beginPath(); ctx.arc(m.x-4, m.y-3, 2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(m.x+4, m.y-3, 2, 0, Math.PI*2); ctx.fill();
+    }
+
+    // HP bar (if damaged)
+    if(m.hp < m.maxHp){
+      ctx.fillStyle = '#000'; ctx.fillRect(m.x-m.r, m.y-m.r-10, m.r*2, 3);
+      ctx.fillStyle = '#8a1a1a';
+      ctx.fillRect(m.x-m.r, m.y-m.r-10, m.r*2*(m.hp/m.maxHp), 3);
+    }
+  }
+
+  // Player
+  // Hurt flash
+  if(P.hurtFlash > 0){
+    ctx.fillStyle = `rgba(255,0,0,${P.hurtFlash*0.5})`;
+    ctx.beginPath(); ctx.arc(P.x, P.y, P.r*2, 0, Math.PI*2); ctx.fill();
+  }
+  // Body
+  ctx.fillStyle = '#c9c9c9';
+  ctx.beginPath(); ctx.arc(P.x, P.y, P.r, 0, Math.PI*2); ctx.fill();
+  // Arm indicator (color of module)
+  ctx.fillStyle = ARM_DATA[P.arm].color;
+  const armAng = P.facing + Math.PI/2;
+  ctx.beginPath(); ctx.arc(P.x + Math.cos(armAng)*10, P.y + Math.sin(armAng)*10, 6, 0, Math.PI*2); ctx.fill();
+  // Right arm (Nale blade) — drawn toward facing
+  const armX = P.x + Math.cos(P.facing)*14;
+  const armY = P.y + Math.sin(P.facing)*14;
+  ctx.strokeStyle = '#d0d0d0';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(P.x, P.y);
+  ctx.lineTo(armX, armY);
+  ctx.stroke();
+
+  // Attack arc animation
+  if(P.atkAnim > 0){
+    const t = 1 - P.atkAnim/0.25;
+    const a0 = P.facing - Math.PI/4;
+    const a1 = P.facing + Math.PI/4;
+    ctx.strokeStyle = `rgba(220,220,220,${0.9-t*0.6})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(P.x, P.y, 50, a0, a1);
+    ctx.stroke();
+  }
+
+  // Particles
+  for(const p of parts){
+    const a = p.life / p.maxLife;
+    ctx.fillStyle = p.color.replace('rgb','rgba').replace(')', `,${a})`);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+
+  // Night vignette
+  if(G.isNight){
+    const grad = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.25, W/2, H/2, Math.max(W,H)*0.75);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.85)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  // Fear vignette
+  if(P.fear > 40){
+    const a = (P.fear-40)/60 * 0.5;
+    const grad = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.3, W/2, H/2, Math.max(W,H)*0.7);
+    grad.addColorStop(0, 'rgba(80,0,0,0)');
+    grad.addColorStop(1, `rgba(80,0,0,${a})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  // Interaction prompt
+  const prompt = document.getElementById('interact');
+  const near = findNearestInteractable();
+  if(near && G.mode === 'play'){
+    prompt.classList.add('open');
+    prompt.textContent = `[E] ${near.label}`;
+  } else {
+    prompt.classList.remove('open');
+  }
+}
+
+function findNearestInteractable(){
+  const check = (arr, label) => {
+    for(const o of arr){
+      if(dist(o,P) < INTERACT_RANGE) return { o, label };
+    }
+    return null;
+  };
+  return check(W_.trees, 'Мод авах')
+      || check(W_.rocks, 'Чулуу авах')
+      || check(W_.scraps, 'Хаягдал авах')
+      || check(W_.bones, 'Яс авах')
+      || check(W_.herbs, 'Өвс авах')
+      || check(W_.cloths, 'Даавуу авах')
+      || check(W_.labs, 'Лаборатори шинжлэх')
+      || check(W_.towers, 'Радио цамхаг шинжлэх');
+}
+
+// ==== Update parts ====
+function updateParts(dt){
+  for(let i = parts.length-1; i >= 0; i--){
+    const p = parts[i];
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.life -= dt;
+    if(p.life <= 0) parts.splice(i,1);
+  }
+}
+
+// ==== Main loop ====
+let lastT = performance.now();
+function loop(t){
+  const dt = Math.min(0.05, (t - lastT)/1000);
+  lastT = t;
+
+  if(G.mode === 'play'){
+    updateDayNight(dt);
+    updatePlayer(dt);
+    updateMobs(dt);
+    updateParts(dt);
+  }
+
+  render();
+  updateHUD();
+  requestAnimationFrame(loop);
+}
+
+// ==== Start / Restart ====
+function startGame(){
+  G.mode = 'play';
+  G.day = 1;
+  G.cycleT = 0;
+  G.isNight = false;
+  G.truth = 0;
+  G.buildMode = null;
+  G.craftOpen = false;
+  G.mobSpawnTimer = 0;
+
+  P.x = WORLD/2; P.y = WORLD/2;
+  P.hp = P.maxHp; P.sp = P.maxSp;
+  P.fear = 0; P.inf = 0;
+  P.arm = 'empty';
+  P.armsOwned = ['empty'];
+  P.inv = { wood:0, stone:0, scrap:0, bone:0, tissue:0, herb:0, cloth:0, chitin:0 };
+  P.atkCd = 0; P.atkAnim = 0; P.hurtFlash = 0;
+
+  genWorld();
+  updateTruth();
+  updateArm();
+  updateHotbar();
+
+  document.getElementById('title').style.display = 'none';
+  document.getElementById('death').classList.remove('open');
+  document.getElementById('craftPanel').classList.remove('open');
+  document.getElementById('log').innerHTML = '';
+  log('Чи ойд сэрлээ. Зүүн гар чинь байхгүй...', 'warn');
+  log('Амьд үлд. Үнэнийг ол. Зугт.', '');
+}
+
+document.getElementById('startBtn').onclick = startGame;
+document.getElementById('restartBtn').onclick = startGame;
+
+// ==== Boot ====
+updateHotbar();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
