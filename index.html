@@ -1905,3 +1905,220 @@ window.__game={player,enemies,buildings,crops,npcs,scene,camera};
 </script>
 </body>
 </html>
+🌐 Multiplayer (Socket.IO)
+Олон тоглогчийн файлууд нь тусдаа сервер шаарддаг. Доор бүрэн бүтэц.
+
+📁 package.json
+json
+{
+  "name": "wild-frontier-mp",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
+📁 server.js
+javascript
+const path = require('path');
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: '*' } });
+
+app.use(express.static(path.join(__dirname, 'public')));
+
+const rooms = new Map();
+
+function makeCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c = '';
+  for (let i = 0; i < 5; i++) c += chars[Math.floor(Math.random() * chars.length)];
+  return rooms.has(c) ? makeCode() : c;
+}
+
+io.on('connection', socket => {
+  socket.on('create-room', (name, cb) => {
+    const code = makeCode();
+    rooms.set(code, {
+      players: new Map(),
+      host: socket.id,
+      timeOfDay: 0.15,
+      dayCount: 1,
+      enemies: [],
+      buildings: [],
+    });
+    rooms.get(code).players.set(socket.id, {
+      name, x: 0, y: 2, z: 0, yaw: 0,
+      hp: 100, sanity: 100, weapon: 'fists', lastSeen: Date.now()
+    });
+    socket.join(code);
+    socket.data.room = code;
+    cb({ ok: true, code });
+  });
+
+  socket.on('join-room', (code, name, cb) => {
+    code = String(code || '').toUpperCase().trim();
+    const room = rooms.get(code);
+    if (!room) return cb({ error: 'Room not found' });
+    if (room.players.size >= 4) return cb({ error: 'Room is full (4 max)' });
+    room.players.set(socket.id, {
+      name, x: 0, y: 2, z: 0, yaw: 0,
+      hp: 100, sanity: 100, weapon: 'fists', lastSeen: Date.now()
+    });
+    socket.join(code);
+    socket.data.room = code;
+    cb({ ok: true, host: room.host, timeOfDay: room.timeOfDay });
+    socket.to(code).emit('player-joined', { id: socket.id, name });
+  });
+
+  // Client sends their own state
+  socket.on('update', data => {
+    const code = socket.data.room;
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room) return;
+    const p = room.players.get(socket.id);
+    if (!p) return;
+    p.x = data.x; p.y = data.y; p.z = data.z;
+    p.yaw = data.yaw; p.hp = data.hp; p.sanity = data.sanity;
+    p.weapon = data.weapon;
+    p.lastSeen = Date.now();
+  });
+
+  // Host broadcasts enemy state
+  socket.on('enemies', list => {
+    const code = socket.data.room;
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room || room.host !== socket.id) return;
+    room.enemies = list;
+  });
+
+  // Host broadcasts buildings
+  socket.on('buildings', list => {
+    const code = socket.data.room;
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room || room.host !== socket.id) return;
+    room.buildings = list;
+  });
+
+  // Time sync from host
+  socket.on('time', t => {
+    const code = socket.data.room;
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room || room.host !== socket.id) return;
+    room.timeOfDay = t.timeOfDay;
+    room.dayCount = t.dayCount;
+  });
+
+  // Player attack on enemy (host processes)
+  socket.on('attack', data => {
+    const code = socket.data.room;
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room || room.host !== socket.id) return;
+    // Broadcast to all including host — clients apply damage locally
+    io.to(code).emit('enemy-hit', { index: data.index, dmg: data.dmg, from: socket.id });
+  });
+
+  // Global chat / event
+  socket.on('chat', msg => {
+    const code = socket.data.room;
+    if (code) io.to(code).emit('chat', { from: socket.id, msg: String(msg).slice(0, 120) });
+  });
+
+  socket.on('disconnect', () => {
+    const code = socket.data.room;
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room) return;
+    room.players.delete(socket.id);
+    socket.to(code).emit('player-left', socket.id);
+    if (room.host === socket.id && room.players.size > 0) {
+      // Promote next player to host
+      const newHost = room.players.keys().next().value;
+      room.host = newHost;
+      io.to(newHost).emit('you-are-host');
+    }
+    if (room.players.size === 0) rooms.delete(code);
+  });
+});
+
+// Broadcast player positions 15x/sec
+setInterval(() => {
+  for (const [code, room] of rooms) {
+    const list = [];
+    for (const [id, p] of room.players) list.push({ id, ...p });
+    io.to(code).emit('state', {
+      players: list,
+      enemies: room.enemies,
+      buildings: room.buildings,
+      timeOfDay: room.timeOfDay,
+      dayCount: room.dayCount,
+    });
+  }
+}, 66);
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log('Server on port ' + PORT));
+📁 public/client-mp.js — HTML-д нэмэх
+Энэ кодыг index.html-ийн сүүлд, </script> хаалтын дараа нэм:
+
+html
+<script src="/socket.io/socket.io.js"></script>
+<script type="module">
+import * as THREE from 'three';
+
+const socket = io();
+const scene = window.__game.scene;
+const player = window.__game.player;
+const enemies = window.__game.enemies;
+const buildings = window.__game.buildings;
+
+let isHost = false;
+let myRoom = null;
+
+// Add UI to menu
+const menu = document.getElementById('menu');
+const panel = menu.querySelector('.panel');
+const mpBox = document.createElement('div');
+mpBox.style.cssText = 'margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1)';
+mpBox.innerHTML = `
+  <div style="font-size:10px;letter-spacing:3px;color:#7a5a55;margin-bottom:8px">MULTIPLAYER</div>
+  <div style="display:flex;gap:6px">
+    <button id="mp-host" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(180,100,100,.3);background:linear-gradient(180deg,#3a1a4a,#1a0a20);color:#fff;font-size:12px;font-weight:600;cursor:pointer">🌐 HOST</button>
+    <button id="mp-join" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(180,100,100,.3);background:linear-gradient(180deg,#1a2a4a,#0a1220);color:#fff;font-size:12px;font-weight:600;cursor:pointer">🔗 JOIN</button>
+  </div>
+  <input id="mp-code" placeholder="CODE" maxlength="5" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(140,180,220,.2);background:rgba(0,0,0,.4);color:#fff;text-align:center;letter-spacing:4px;text-transform:uppercase;font-size:14px">
+  <div id="mp-status" style="font-size:11px;color:#9fb2d0;margin-top:6px;min-height:14px"></div>
+`;
+panel.appendChild(mpBox);
+
+const mpStatus = document.getElementById('mp-status');
+
+// Remote player meshes
+const remoteMeshes = new Map();
+function makeRemote(name){
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.4,1.0,4,8),
+    new THREE.MeshStandardMaterial({color:0x3d6fd6,roughness:0.8})
+  );
+  body.position.y=1.05; g.add(body);
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.32,8,6),
+    new THREE.MeshStandardMaterial({color:0xe8b98a})
+  );
+  head.position.y=1.85; g.add(head);
+  // Name
+  const cv=document.createElement('canvas'); cv.width=256; cv.height=64;
+  const cx=cv.getContext('2d');
+  cx.font='bold 30px sans-serif
