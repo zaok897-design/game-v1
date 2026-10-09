@@ -7,7 +7,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;overflow:hidden;background:#05060f;color:#e8eef5;
-  font-family:system-ui,-apple-system,sans-serif;user-select:none;-webkit-user-select:none}
+  font-family:system-ui,sans-serif;user-select:none;-webkit-user-select:none}
 canvas{display:block;touch-action:none}
 #ui{position:fixed;inset:0;pointer-events:none;z-index:10}
 #stats{position:absolute;top:12px;left:12px;display:flex;flex-direction:column;gap:5px}
@@ -25,14 +25,13 @@ canvas{display:block;touch-action:none}
 #stamina .stat-fill{background:linear-gradient(90deg,#1a6a2a,#3ac76a)}
 #inv{position:absolute;top:12px;right:12px;background:rgba(10,14,24,.75);
   border:1px solid rgba(140,180,220,.15);border-radius:10px;padding:8px 10px;
-  min-width:110px;font-size:11px}
+  min-width:125px;font-size:11px}
 #inv h4{font-size:8px;letter-spacing:1px;color:#8d9fb8;margin-bottom:4px}
 .inv-row{display:flex;justify-content:space-between;padding:1px 0;color:#c8d4e0}
 .inv-row b{color:#e6c86a}
 #cross{position:absolute;left:50%;top:50%;width:20px;height:20px;transform:translate(-50%,-50%)}
 #cross .r{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-  width:16px;height:16px;border:1px solid rgba(220,220,220,.55);border-radius:50%;
-  transition:.1s}
+  width:16px;height:16px;border:1px solid rgba(220,220,220,.55);border-radius:50%}
 #cross .d{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
   width:2px;height:2px;background:#fff;border-radius:50%}
 #cross.hit .r{border-color:#e74c3c;transform:translate(-50%,-50%) scale(1.5)}
@@ -49,6 +48,9 @@ canvas{display:block;touch-action:none}
   border:1px solid rgba(140,180,220,.15);border-radius:8px;
   padding:5px 10px;font-size:11px;color:#b8c4d0}
 #weapon b{color:#e6c86a}
+#coins{position:absolute;bottom:52px;left:18px;background:rgba(60,40,10,.85);
+  border:1px solid rgba(230,200,106,.4);border-radius:8px;
+  padding:5px 10px;font-size:12px;color:#e6c86a;font-weight:700}
 #brightBox{position:absolute;bottom:78px;right:12px;background:rgba(10,14,24,.85);
   border:1px solid rgba(140,180,220,.15);border-radius:8px;padding:6px 10px;
   display:flex;align-items:center;gap:6px;pointer-events:auto;font-size:10px}
@@ -93,6 +95,8 @@ canvas{display:block;touch-action:none}
 .btn.pri{background:linear-gradient(180deg,#6a2a2a,#2a0e0e);
   border-color:rgba(220,120,120,.45)}
 .btn.gh{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.14)}
+.btn.gold{background:linear-gradient(180deg,#7a5a1a,#3a2a0a);
+  border-color:rgba(230,200,106,.5);color:#f0e0a0}
 .tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
 .tab{flex:1;min-width:66px;padding:7px 4px;border-radius:7px;
   background:rgba(255,255,255,.05);color:#9a8a80;font-size:10px;
@@ -121,6 +125,16 @@ canvas{display:block;touch-action:none}
   font-size:11px;font-weight:700;cursor:pointer}
 .rc button:disabled{background:rgba(70,35,35,.8);color:#8a5a5a;
   border-color:rgba(120,60,60,.35);cursor:not-allowed;opacity:.75}
+.shop-item{display:flex;justify-content:space-between;align-items:center;
+  background:rgba(60,40,20,.6);padding:10px 12px;border-radius:9px;
+  margin-bottom:6px;border:1px solid rgba(230,200,106,.25);text-align:left}
+.shop-item .info{flex:1}
+.shop-item .name{font-size:12.5px;font-weight:700;color:#f0e0c8}
+.shop-item .desc{font-size:10px;color:#a89890;margin-top:1px}
+.shop-item button{padding:7px 14px;border-radius:7px;border:1px solid rgba(230,200,106,.5);
+  background:linear-gradient(180deg,#7a5a1a,#3a2a0a);color:#f0e0a0;
+  font-size:11px;font-weight:700;cursor:pointer;min-width:80px}
+.shop-item button:disabled{opacity:.5;cursor:not-allowed}
 #load{position:fixed;inset:0;background:#05060f;z-index:200;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
 #load.hid{display:none}
@@ -151,9 +165,13 @@ canvas{display:block;touch-action:none}
     <div class="inv-row"><span>🦴 Bone</span><b id="ib">0</b></div>
     <div class="inv-row"><span>🌿 Herb</span><b id="ih">0</b></div>
     <div class="inv-row"><span>💧 Essence</span><b id="ie">0</b></div>
+    <div class="inv-row"><span>⚫ Coal</span><b id="ico">0</b></div>
+    <div class="inv-row"><span>⛓️ Iron</span><b id="iir">0</b></div>
+    <div class="inv-row"><span>🟡 Gold Ore</span><b id="igo">0</b></div>
     <div class="inv-row"><span>💎 Crystal</span><b id="ic">0</b></div>
   </div>
   <div id="weapon">⚔️ <b id="wn">Bare Hands</b></div>
+  <div id="coins">💰 <b id="coinCount">0</b> coins</div>
   <div id="cross"><div class="r"></div><div class="d"></div></div>
   <div id="toast"></div>
   <div id="warn"></div>
@@ -174,13 +192,14 @@ canvas{display:block;touch-action:none}
   <div class="pn">
     <h1>WILD FRONTIER</h1>
     <p style="font-size:10px;letter-spacing:4px;color:#7a5a55;margin-bottom:14px">SURVIVAL HORROR</p>
-    <p>Night falls. Something moves between the trees.</p>
+    <p>Mine ores. Trade for gold. Forge legendary weapons.</p>
     <button class="btn pri" id="bStart">▶  ENTER THE DARK</button>
     <div style="margin-top:14px;text-align:left;font-size:11px;line-height:1.7;color:#a89898;background:rgba(0,0,0,.35);padding:10px;border-radius:8px">
-      <b style="color:#e0c098">Desktop</b><br>
-      WASD · Mouse · Shift · Space · E/F · C · ESC<br><br>
-      <b style="color:#e0c098">Mobile</b><br>
-      Left=joystick · Right=look · Buttons bottom-right
+      <b style="color:#e0c098">Desktop</b>: WASD · Mouse · Shift · Space · E/F · C · ESC<br>
+      <b style="color:#e0c098">Mobile</b>: Left=joystick · Right=look · Bottom buttons<br><br>
+      <b style="color:#e6c86a">⛏️ Mine ores in the eastern cave</b><br>
+      <b style="color:#e6c86a">🏭 Build Smeltery to make Gold Coins</b><br>
+      <b style="color:#e6c86a">🧙 Trade with the merchant (follow compass)</b>
     </div>
   </div>
 </div>
@@ -191,6 +210,15 @@ canvas{display:block;touch-action:none}
     <div class="tabs" id="tabs"></div>
     <div id="rcList"></div>
     <button class="btn gh" id="bCloseCraft" style="margin-top:10px">Close</button>
+  </div>
+</div>
+
+<div id="shop" class="ov hid">
+  <div class="pn">
+    <h2>🧙 MERCHANT</h2>
+    <p style="font-size:11px;color:#e6c86a">💰 You have <b id="shopCoins">0</b> coins</p>
+    <div id="shopList"></div>
+    <button class="btn gh" id="bCloseShop" style="margin-top:10px">Leave</button>
   </div>
 </div>
 
@@ -212,26 +240,21 @@ canvas{display:block;touch-action:none}
 </script>
 
 <script type="module">
-// ★★★ ERROR HANDLER — FIRST THING ★★★
+// ============ ERROR HANDLER FIRST ============
 window.addEventListener('error', e => {
   const m = document.getElementById('loadMsg');
-  if (m) {
-    m.textContent = '❌ ' + (e.message||'Unknown') + ' @ line ' + (e.lineno||'?');
-    m.classList.add('err');
-  }
+  if(m){ m.textContent = '❌ ' + (e.message||'Error') + ' @ ' + (e.lineno||'?');
+    m.classList.add('err'); }
   const l = document.getElementById('load');
-  if (l) l.classList.add('hid');
+  if(l) l.classList.add('hid');
 });
-
-// ★★★ Hide loading immediately — game runs from here ★★★
 setTimeout(() => {
   const l = document.getElementById('load');
-  if (l) l.classList.add('hid');
-}, 800);
+  if(l) l.classList.add('hid');
+}, 1500);
 
 import * as THREE from 'three';
-
-console.log('THREE loaded:', THREE.REVISION);
+console.log('THREE r' + THREE.REVISION);
 
 // ============ HELPERS ============
 const $ = id => document.getElementById(id);
@@ -239,7 +262,7 @@ const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
 const lerp = (a,b,t) => a + (b-a)*t;
 const rnd = (a,b) => a + Math.random()*(b-a);
 const mobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ||
-                window.matchMedia('(pointer:coarse)').matches;
+               window.matchMedia('(pointer:coarse)').matches;
 
 function hash(x,y){ const n = Math.sin(x*127.1+y*311.7)*43758.5453; return n - Math.floor(n); }
 function vn(x,y){
@@ -249,7 +272,7 @@ function vn(x,y){
   return a*(1-u)*(1-v)+b*u*(1-v)+c*(1-u)*v+d*u*v;
 }
 function fbm(x,y){ let v=0,a=1,f=1,n=0;
-  for(let i=0;i<4;i++){v+=vn(x*f,y*f)*a;n+=a;a*=0.5;f*=2;} return v/n; }
+  for(let i=0;i<4;i++){ v+=vn(x*f,y*f)*a; n+=a; a*=0.5; f*=2; } return v/n; }
 
 // ============ AUDIO ============
 const A = (() => {
@@ -278,8 +301,12 @@ const A = (() => {
     chain(){ tone(90,.4,'sawtooth',.15); noise(.35,.18); },
     hit(){ tone(90,.15,'square',.12); noise(.08,.15); },
     pick(){ tone(520,.08,'sine',.06); },
+    ore(){ tone(200,.15,'square',.1); },
     step(){ noise(.06,.04); },
     craft(){ tone(440,.1,'triangle',.08); setTimeout(()=>tone(660,.15,'triangle',.08),80); },
+    smelt(){ tone(180,.5,'sawtooth',.12); setTimeout(()=>tone(240,.4,'triangle',.1),200); },
+    coin(){ tone(800,.1,'sine',.1); setTimeout(()=>tone(1200,.15,'sine',.08),80); },
+    buy(){ tone(660,.1,'triangle',.12); setTimeout(()=>tone(880,.15,'triangle',.1),100); },
     hurt(){ tone(140,.3,'sawtooth',.18); },
     die(){ tone(80,.8,'sawtooth',.2); },
     growl(){ tone(70+Math.random()*30,.5,'sawtooth',.08); },
@@ -339,14 +366,14 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 
-// ============ SKY ============
+// Sky
 const skyU = {
   top: { value: new THREE.Color(0x2a3050) },
   mid: { value: new THREE.Color(0x3a3558) },
   bot: { value: new THREE.Color(0x6a4050) },
   off: { value: 60.0 }
 };
-const sky = new THREE.Mesh(
+scene.add(new THREE.Mesh(
   new THREE.SphereGeometry(400, 24, 16),
   new THREE.ShaderMaterial({
     uniforms: skyU,
@@ -362,8 +389,7 @@ const sky = new THREE.Mesh(
       }`,
     side: THREE.BackSide, depthWrite: false
   })
-);
-scene.add(sky);
+));
 
 // Stars
 let starM;
@@ -392,7 +418,7 @@ const sun = new THREE.DirectionalLight(0xfff0d0, 1.6);
 sun.position.set(40,80,30); scene.add(sun);
 scene.fog = new THREE.Fog(0x3a3558, 25, 140);
 
-// ============ TERRAIN MESH ============
+// Terrain mesh
 const SEG = mobile ? 72 : 120;
 const tg = new THREE.PlaneGeometry(HALF*2, HALF*2, SEG, SEG);
 tg.rotateX(-Math.PI/2);
@@ -405,7 +431,7 @@ tg.rotateX(-Math.PI/2);
     p.setY(i,y);
     if(x>45){
       const inC = clamp((x-45)/20,0,1);
-      c.set(0x2a1a3a).multiplyScalar(0.7+fbm(x*0.4,z*0.4)*0.5);
+      c.set(0x2a1a3a).multiplyScalar(0.7 + fbm(x*0.4,z*0.4)*0.5);
       if(inC<1){
         const sc=new THREE.Color();
         if(y<0.4) sc.setHex(0x6a5a30);
@@ -440,6 +466,7 @@ scene.add(water);
 
 // ============ RESOURCES ============
 const trees=[], rocks=[], bushes=[], bones=[], crystals=[];
+const ores = { coal:[], iron:[], gold:[] };
 const _d = new THREE.Object3D();
 function si(m,i,x,y,z,s,ry=0){
   _d.position.set(x,y,z); _d.rotation.set(0,ry,0); _d.scale.set(s,s,s);
@@ -451,7 +478,7 @@ function hi(m,i){
   m.instanceMatrix.needsUpdate = true;
 }
 
-const TN = mobile ? 70 : 110;
+const TN = mobile ? 60 : 90;
 const trunkG = new THREE.CylinderGeometry(0.18, 0.28, 4.5, 5); trunkG.translate(0,2.25,0);
 const folG = new THREE.ConeGeometry(2.1, 5, 6); folG.translate(0,5.5,0);
 const trunkI = new THREE.InstancedMesh(trunkG,
@@ -460,30 +487,41 @@ const folI = new THREE.InstancedMesh(folG,
   new THREE.MeshStandardMaterial({ color:0x2a5a20, roughness:1, flatShading:true }), TN);
 scene.add(trunkI, folI);
 
-const RN = mobile ? 50 : 80;
+const RN = mobile ? 40 : 60;
 const rockI = new THREE.InstancedMesh(
   new THREE.DodecahedronGeometry(0.9,0),
   new THREE.MeshStandardMaterial({ color:0x8a8a88, roughness:0.9, flatShading:true }), RN);
 scene.add(rockI);
 
-const BN = mobile ? 40 : 70;
+const BN = mobile ? 30 : 50;
 const bushG = new THREE.SphereGeometry(0.7,6,5); bushG.scale(1,0.7,1);
 const bushI = new THREE.InstancedMesh(bushG,
   new THREE.MeshStandardMaterial({ color:0x3a6a2a, roughness:1, flatShading:true }), BN);
 scene.add(bushI);
 
-const BONE_N = 30;
+const BONE_N = 25;
 const boneI = new THREE.InstancedMesh(
   new THREE.CylinderGeometry(0.06,0.06,0.5,4),
   new THREE.MeshStandardMaterial({ color:0xe8d8b8, roughness:0.8 }), BONE_N);
 scene.add(boneI);
 
-const CN = 40;
+const CN = 30;
 const crystalI = new THREE.InstancedMesh(
   new THREE.OctahedronGeometry(0.5,0),
   new THREE.MeshStandardMaterial({ color:0x9a5adf, emissive:0x6a2adf,
     emissiveIntensity:1.5, roughness:0.2, flatShading:true }), CN);
 scene.add(crystalI);
+
+// Ore instances
+const COAL_N = 30, IRON_N = 25, GOLD_N = 15;
+const oreGeo = new THREE.DodecahedronGeometry(0.5, 0);
+const coalMat = new THREE.MeshStandardMaterial({ color:0x1a1a1a, roughness:0.9, flatShading:true });
+const ironMat = new THREE.MeshStandardMaterial({ color:0x8a5a3a, roughness:0.7, flatShading:true, emissive:0x1a0a05, emissiveIntensity:0.3 });
+const goldMat = new THREE.MeshStandardMaterial({ color:0xe6c86a, roughness:0.3, metalness:0.6, flatShading:true, emissive:0x8a6a1a, emissiveIntensity:0.8 });
+const coalI = new THREE.InstancedMesh(oreGeo, coalMat, COAL_N);
+const ironI = new THREE.InstancedMesh(oreGeo, ironMat, IRON_N);
+const goldI = new THREE.InstancedMesh(oreGeo, goldMat, GOLD_N);
+scene.add(coalI, ironI, goldI);
 
 {
   const rng = (()=>{ let s=1337; return ()=>{ s=(s*16807)%2147483647; return s/2147483647; }; })();
@@ -538,7 +576,7 @@ scene.add(crystalI);
   }
   boneI.count = p; boneI.instanceMatrix.needsUpdate = true;
 
-  // Crystals (east cave zone)
+  // Crystals
   p=0;t=0;
   while(p<CN && t<CN*50){ t++;
     const x=50+rng()*40, z=(rng()-0.5)*(HALF*2-20);
@@ -549,19 +587,56 @@ scene.add(crystalI);
     si(crystalI,p,x,y+s*0.5,z,s,rng()*6.28); p++;
   }
   crystalI.count = p; crystalI.instanceMatrix.needsUpdate = true;
+
+  // COAL — surface + shallow cave
+  p=0;t=0;
+  while(p<COAL_N && t<COAL_N*50){ t++;
+    const x=rng()<0.6 ? (rng()-0.5)*150 : 45+rng()*45;
+    const z=(rng()-0.5)*(HALF*2-15);
+    const y=th(x,z);
+    if(y<0.5||y>12) continue;
+    const s=0.5+rng()*0.8;
+    ores.coal.push({x,y,z,hp:3,alive:true});
+    si(coalI,p,x,y+s*0.4,z,s,rng()*6.28); p++;
+  }
+  coalI.count = p; coalI.instanceMatrix.needsUpdate = true;
+
+  // IRON — deeper cave only
+  p=0;t=0;
+  while(p<IRON_N && t<IRON_N*50){ t++;
+    const x=52+rng()*38, z=(rng()-0.5)*(HALF*2-20);
+    const y=th(x,z);
+    if(y<0.5||y>7) continue;
+    const s=0.5+rng()*0.7;
+    ores.iron.push({x,y,z,hp:4,alive:true});
+    si(ironI,p,x,y+s*0.4,z,s,rng()*6.28); p++;
+  }
+  ironI.count = p; ironI.instanceMatrix.needsUpdate = true;
+
+  // GOLD — deepest cave only
+  p=0;t=0;
+  while(p<GOLD_N && t<GOLD_N*50){ t++;
+    const x=65+rng()*25, z=(rng()-0.5)*(HALF*2-25);
+    const y=th(x,z);
+    if(y<0.5||y>6) continue;
+    const s=0.45+rng()*0.6;
+    ores.gold.push({x,y,z,hp:5,alive:true});
+    si(goldI,p,x,y+s*0.4,z,s,rng()*6.28); p++;
+  }
+  goldI.count = p; goldI.instanceMatrix.needsUpdate = true;
 }
 
-// Cave lights + mushrooms
+// Cave ambience + mushrooms
 const mushG = new THREE.SphereGeometry(0.25,6,5);
 const mushM = new THREE.MeshStandardMaterial({ color:0x80d8ff, emissive:0x40a0e0, emissiveIntensity:1.2 });
-for(let i=0;i<8;i++){
+for(let i=0;i<6;i++){
   const x=50+Math.random()*38, z=(Math.random()-0.5)*140;
   const y=th(x,z);
   if(y<0.5||y>8) continue;
-  const light = new THREE.PointLight(0x6a9aff, 4.5, 14, 1.6);
+  const light = new THREE.PointLight(0x6a9aff, 4, 14, 1.6);
   light.position.set(x, y+1.5, z);
   scene.add(light);
-  for(let m=0;m<5;m++){
+  for(let m=0;m<4;m++){
     const mx=x+(Math.random()-0.5)*2, mz=z+(Math.random()-0.5)*2;
     const my=th(mx,mz);
     const mm = new THREE.Mesh(mushG, mushM);
@@ -571,6 +646,46 @@ for(let i=0;i<8;i++){
   }
 }
 
+// ============ MERCHANT CAMP (fixed village) ============
+const merchantPos = new THREE.Vector3(20, 0, 20);
+merchantPos.y = th(merchantPos.x, merchantPos.z);
+const merchantGroup = new THREE.Group();
+merchantGroup.position.copy(merchantPos);
+
+// Tent
+const tentMat = new THREE.MeshStandardMaterial({ color:0x5a1a1a, roughness:0.9, flatShading:true });
+const tent = new THREE.Mesh(new THREE.ConeGeometry(2.5, 2.8, 4), tentMat);
+tent.position.y = 1.4; tent.rotation.y = Math.PI/4;
+merchantGroup.add(tent);
+
+// Merchant NPC
+const mBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.35, 0.9, 4, 6),
+  new THREE.MeshStandardMaterial({ color:0x6a3a5a, roughness:0.9 }));
+mBody.position.y = 0.9; merchantGroup.add(mBody);
+const mHead = new THREE.Mesh(new THREE.SphereGeometry(0.28, 7, 6),
+  new THREE.MeshStandardMaterial({ color:0xf0c8a0 }));
+mHead.position.y = 1.7; merchantGroup.add(mHead);
+
+// Merchant icon
+const mcv = document.createElement('canvas'); mcv.width = 64; mcv.height = 64;
+const mcx = mcv.getContext('2d');
+mcx.font = '40px sans-serif'; mcx.textAlign = 'center';
+mcx.fillText('🧙', 32, 48);
+const mSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: new THREE.CanvasTexture(mcv), transparent:true, depthTest:false }));
+mSprite.scale.set(0.9, 0.9, 1);
+mSprite.position.y = 2.5;
+merchantGroup.add(mSprite);
+
+// Merchant lantern
+const mLight = new THREE.PointLight(0xffa040, 4, 12, 1.6);
+mLight.position.y = 2; merchantGroup.add(mLight);
+const mLantern = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, 0.3),
+  new THREE.MeshBasicMaterial({ color:0xffa040, transparent:true, opacity:0.85 }));
+mLantern.position.set(-1.8, 2, 0); merchantGroup.add(mLantern);
+
+scene.add(merchantGroup);
+
 // ============ PLAYER ============
 const EYE=1.68, GRAV=24, WALK=5.5, RUN=8.5, JUMP=9, SWIM=3, REACH=5;
 
@@ -579,8 +694,10 @@ const P = {
   yaw: 0, pitch: 0, onG: false, inW: false,
   hp: 100, food: 100, water: 100, san: 100, sta: 100,
   wood: 0, stone: 0, bone: 0, herb: 0, ess: 0, crys: 0,
+  coal: 0, iron: 0, goldOre: 0, coins: 0,
   weapon: 'fists', atkCd: 0, hurtCd: 0,
-  bobT: 0, bobY: 0, sprint: false, adren: 0
+  bobT: 0, bobY: 0, sprint: false, adren: 0,
+  _hearthBuilt: false, _towerBuilt: false, _smelterBuilt: false
 };
 let jumpP = false;
 
@@ -595,8 +712,12 @@ function makeHand(name){
   const dark = new THREE.MeshStandardMaterial({ color:0x3a3a3a, roughness:0.5, metalness:0.7 });
   const bone = new THREE.MeshStandardMaterial({ color:0xe0d0b0, roughness:0.5, flatShading:true });
   const shadow = new THREE.MeshStandardMaterial({ color:0x2a0a4a, emissive:0x8a2aff,
-    emissiveIntensity:1.8, roughness:0.3, metalness:0.5, flatShading:true });
+    emissiveIntensity:1.8, roughness:0.3, flatShading:true });
   const skin = new THREE.MeshStandardMaterial({ color:0x8a5a2a, roughness:0.9 });
+  const steel = new THREE.MeshStandardMaterial({ color:0xc8c8d0, roughness:0.3, metalness:0.8 });
+  const mithril = new THREE.MeshStandardMaterial({ color:0x9ac8ff, emissive:0x4a80c8,
+    emissiveIntensity:1.2, roughness:0.2, metalness:0.7, flatShading:true });
+  const obsidian = new THREE.MeshStandardMaterial({ color:0x0a0a15, roughness:0.2, metalness:0.3, flatShading:true });
 
   if(name === 'fists'){
     const m = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.08,0.55), skin);
@@ -613,7 +734,7 @@ function makeHand(name){
     g.rotation.set(0.2, 0.35, 0.1);
   } else if(name === 'chainsaw'){
     const b = new THREE.Mesh(new THREE.BoxGeometry(0.14,0.16,0.55),
-      new THREE.MeshStandardMaterial({ color:0x7a2a1a, roughness:0.7, metalness:0.4 }));
+      new THREE.MeshStandardMaterial({ color:0x7a2a1a, roughness:0.7 }));
     const bar = new THREE.Mesh(new THREE.BoxGeometry(0.06,0.14,0.7), dark);
     bar.position.set(0,0,-0.55); bar.rotation.z = Math.PI/2;
     const hnd = new THREE.Mesh(new THREE.TorusGeometry(0.09,0.02,6,10,Math.PI), wood);
@@ -633,20 +754,47 @@ function makeHand(name){
       new THREE.MeshStandardMaterial({ color:0x1a0a2a, roughness:0.7 }));
     hilt.rotation.x = Math.PI/2;
     const guard = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.03,0.03),
-      new THREE.MeshStandardMaterial({ color:0x3a1a5a, roughness:0.5 }));
+      new THREE.MeshStandardMaterial({ color:0x3a1a5a }));
     guard.position.set(0,0,-0.08);
     const light = new THREE.PointLight(0x8a2aff, 0.8, 1.2);
     light.position.set(0,0,-0.4);
     g.add(blade,hilt,guard,light);
     g.position.set(0.32,-0.32,-0.55);
     g.rotation.set(0.25, 0.4, 0.15);
-  } else if(name === 'launcher'){
-    const b = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.14,0.5), wood);
-    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,0.5,6), dark);
-    barrel.rotation.x = Math.PI/2; barrel.position.set(0,0.02,-0.35);
-    g.add(b,barrel);
-    g.position.set(0.32,-0.3,-0.55);
-    g.rotation.set(0.15, 0.35, 0.1);
+  } else if(name === 'ironSword'){
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.7, 0.03), steel);
+    blade.rotation.x = Math.PI/2; blade.position.set(0,0,-0.35);
+    const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.18,6), wood);
+    hilt.rotation.x = Math.PI/2;
+    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.04,0.04), steel);
+    guard.position.set(0,0,-0.05);
+    g.add(blade,hilt,guard);
+    g.position.set(0.3,-0.3,-0.55);
+    g.rotation.set(0.15, 0.4, 0.15);
+  } else if(name === 'mithril'){
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.85, 0.03), mithril);
+    blade.rotation.x = Math.PI/2; blade.position.set(0,0,-0.4);
+    const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.18,6), wood);
+    hilt.rotation.x = Math.PI/2;
+    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.05,0.05), mithril);
+    guard.position.set(0,0,-0.05);
+    const light = new THREE.PointLight(0x4a80c8, 1.2, 2);
+    light.position.set(0,0,-0.4);
+    g.add(blade,hilt,guard,light);
+    g.position.set(0.3,-0.3,-0.55);
+    g.rotation.set(0.15, 0.4, 0.15);
+  } else if(name === 'bow'){
+    const arc = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.025, 5, 12, Math.PI), obsidian);
+    arc.rotation.y = Math.PI/2; arc.rotation.z = Math.PI/2;
+    arc.position.set(0.2,-0.25,-0.6);
+    const stringM = new THREE.LineBasicMaterial({ color:0xe8d8b8 });
+    const stringG = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0.2,0.05,-0.6),
+      new THREE.Vector3(0.2,-0.55,-0.6)
+    ]);
+    const string = new THREE.Line(stringG, stringM);
+    g.add(arc, string);
+    g.rotation.set(0.1, 0.5, 0.1);
   }
   return g;
 }
@@ -656,7 +804,9 @@ const weaponModels = {
   axe: makeHand('axe'),
   chainsaw: makeHand('chainsaw'),
   dagger: makeHand('dagger'),
-  launcher: makeHand('launcher'),
+  ironSword: makeHand('ironSword'),
+  mithril: makeHand('mithril'),
+  bow: makeHand('bow'),
 };
 let curHand = weaponModels.fists;
 handG.add(curHand);
@@ -675,11 +825,12 @@ const keys = {};
 addEventListener('keydown', e => {
   keys[e.code] = true;
   if(e.code === 'Space') e.preventDefault();
-  if(e.code === 'KeyE') gather();
+  if(e.code === 'KeyE') interact();
   if(e.code === 'KeyF') attack();
   if(e.code === 'KeyC') toggleCraft();
   if(e.code === 'Escape'){
     if(craftOpen) toggleCraft();
+    else if(shopOpen) toggleShop();
     else if(document.pointerLockElement) document.exitPointerLock();
   }
 });
@@ -697,7 +848,7 @@ document.addEventListener('mousemove', e => {
 });
 document.addEventListener('mousedown', e => {
   if(document.pointerLockElement !== canvas) return;
-  if(e.button === 0) gather();
+  if(e.button === 0) interact();
   if(e.button === 2) attack();
 });
 document.addEventListener('contextmenu', e => e.preventDefault());
@@ -753,14 +904,11 @@ function endTouch(e){
 canvas.addEventListener('touchend', endTouch, { passive: false });
 canvas.addEventListener('touchcancel', endTouch, { passive: false });
 
-function bindBtn(id, down){
+function bindBtn(id, fn){
   const el = $(id);
-  el.addEventListener('pointerdown', e => {
-    e.preventDefault(); e.stopPropagation();
-    down();
-  });
+  el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); fn(); });
 }
-bindBtn('btA', attack); bindBtn('btG', gather);
+bindBtn('btA', attack); bindBtn('btG', interact);
 bindBtn('btJ', () => jumpP = true);
 bindBtn('btC', toggleCraft);
 
@@ -791,30 +939,40 @@ function updateHUD(){
   document.querySelector('#stamina .stat-fill').style.width = clamp(P.sta,0,100)+'%';
   $('iw').textContent = P.wood; $('is').textContent = P.stone;
   $('ib').textContent = P.bone; $('ih').textContent = P.herb;
-  $('ie').textContent = P.ess;  $('ic').textContent = P.crys;
-  const names = { fists:'Bare Hands', axe:'Stone Axe', dagger:'Shadow Dagger',
-    chainsaw:'Bone Chainsaw', launcher:'Nail-Launcher' };
+  $('ie').textContent = P.ess; $('ico').textContent = P.coal;
+  $('iir').textContent = P.iron; $('igo').textContent = P.goldOre;
+  $('ic').textContent = P.crys;
+  $('coinCount').textContent = P.coins;
+  const names = { fists:'Bare Hands', axe:'Stone Axe', chainsaw:'Bone Chainsaw',
+    dagger:'Shadow Dagger', ironSword:'Iron Sword', mithril:'Mithril Blade',
+    bow:'Obsidian Bow' };
   $('wn').textContent = names[P.weapon] || P.weapon;
 }
 
 // ============ CRAFTING ============
 const RECIPES = [
-  {id:'axe', name:'Stone Axe', ic:'🪓', cost:{wood:3,stone:2}, desc:'Gather faster'},
-  {id:'dagger', name:'Shadow Dagger', ic:'🗡️', cost:{bone:5,ess:3}, desc:'40 dmg'},
-  {id:'chainsaw', name:'Bone Chainsaw', ic:'🪚', cost:{wood:5,bone:10,stone:3}, desc:'75 dmg'},
-  {id:'launcher', name:'Nail-Launcher', ic:'🔫', cost:{wood:4,stone:5,bone:3}, desc:'Ranged'},
-  {id:'campfire', name:'Campfire', ic:'🔥', cost:{wood:3,stone:3}, desc:'Warm light'},
-  {id:'lantern', name:'Lantern', ic:'🏮', cost:{wood:4,bone:3,ess:4}, desc:'Blue light'},
-  {id:'hearth', name:'Village Hearth', ic:'🗿', cost:{wood:8,stone:6,bone:4,ess:3}, desc:'Safe zone'},
-  {id:'tower', name:'Watchtower', ic:'🗼', cost:{wood:10,stone:8,bone:5}, desc:'Auto-turret'},
+  // Tools / basic
+  {id:'axe', name:'Stone Axe', ic:'🪓', cost:{wood:3,stone:2}, desc:'Gather faster, 25 dmg', cat:'tool'},
+  {id:'dagger', name:'Shadow Dagger', ic:'🗡️', cost:{bone:5,ess:3}, desc:'Fast, 40 dmg', cat:'weapon'},
+  {id:'chainsaw', name:'Bone Chainsaw', ic:'🪚', cost:{wood:5,bone:10,stone:3}, desc:'75 dmg, loud', cat:'weapon'},
+  // NEW ore-based weapons
+  {id:'ironSword', name:'Iron Sword', ic:'⚔️', cost:{iron:5,wood:2,bone:2}, desc:'60 dmg · forged steel', cat:'weapon'},
+  {id:'mithril', name:'Mithril Blade', ic:'🌌', cost:{iron:8,goldOre:3,crys:5}, desc:'110 dmg · legendary', cat:'weapon'},
+  {id:'bow', name:'Obsidian Bow', ic:'🏹', cost:{coal:5,iron:3,bone:5}, desc:'Ranged 80 dmg', cat:'weapon'},
+  // Buildings
+  {id:'campfire', name:'Campfire', ic:'🔥', cost:{wood:3,stone:3}, desc:'Warm light', cat:'build'},
+  {id:'lantern', name:'Lantern', ic:'🏮', cost:{wood:4,bone:3,ess:4}, desc:'Blue light', cat:'build'},
+  {id:'hearth', name:'Village Hearth', ic:'🗿', cost:{wood:8,stone:6,bone:4,ess:3}, desc:'Safe zone', cat:'build'},
+  {id:'tower', name:'Watchtower', ic:'🗼', cost:{wood:10,stone:8,bone:5}, desc:'Auto-turret', cat:'build'},
+  // ★ NEW — Smeltery
+  {id:'smelter', name:'Smeltery', ic:'🏭', cost:{stone:10,coal:5,iron:3}, desc:'Refine ores → coins', cat:'build'},
 ];
 const CATS = [
-  {id:'wep', label:'⚔️'},
-  {id:'bld', label:'🏗️'},
+  {id:'tool', label:'🔧 Tool'},
+  {id:'weapon', label:'⚔️ Weapon'},
+  {id:'build', label:'🏗️ Build'},
 ];
-const CMAP = { axe:'wep', dagger:'wep', chainsaw:'wep', launcher:'wep',
-  campfire:'bld', lantern:'bld', hearth:'bld', tower:'bld' };
-let craftOpen = false, craftTab = 'wep';
+let craftOpen = false, craftTab = 'tool';
 
 function toggleCraft(){
   if(state !== 'play') return;
@@ -830,7 +988,7 @@ $('bCloseCraft').onclick = toggleCraft;
 function renderTabs(){
   const tr = $('tabs'); tr.innerHTML = '';
   for(const c of CATS){
-    const list = RECIPES.filter(r => (CMAP[r.id]||'wep') === c.id);
+    const list = RECIPES.filter(r => r.cat === c.id);
     if(!list.length) continue;
     const n = list.filter(r => canCraft(r)).length;
     const d = document.createElement('div');
@@ -844,12 +1002,14 @@ function canCraft(r){
   for(const k in r.cost) if((P[k]||0) < r.cost[k]) return false;
   if(r.id === 'tower' && P._towerBuilt) return false;
   if(r.id === 'hearth' && P._hearthBuilt) return false;
+  if(r.id === 'smelter' && P._smelterBuilt) return false;
   return true;
 }
 function renderRecipes(){
   const box = $('rcList'); box.innerHTML = '';
-  const icons = { wood:'🪵', stone:'🪨', bone:'🦴', herb:'🌿', ess:'💧' };
-  const list = RECIPES.filter(r => (CMAP[r.id]||'wep') === craftTab);
+  const icons = { wood:'🪵', stone:'🪨', bone:'🦴', herb:'🌿', ess:'💧',
+    coal:'⚫', iron:'⛓️', goldOre:'🟡', crys:'💎' };
+  const list = RECIPES.filter(r => r.cat === craftTab);
   for(const r of list){
     const ok = canCraft(r);
     let mats = '', missing = 0;
@@ -859,7 +1019,7 @@ function renderRecipes(){
       mats += `<div class="mat ${good?'ok':'no'}">${icons[k]||k} ${have}/${need}</div>`;
     }
     const hint = ok ? '✓ Ready' : `✗ Need ${missing} more`;
-    const label = ['hearth','tower'].includes(r.id) ? 'BUILD' : 'CRAFT';
+    const label = ['hearth','tower','smelter','campfire','lantern'].includes(r.id) ? 'BUILD' : 'CRAFT';
     const d = document.createElement('div');
     d.className = 'rc' + (ok ? ' ok' : '');
     d.innerHTML = `
@@ -880,16 +1040,36 @@ function craft(r){
   else if(r.id === 'lantern') placeB('lantern');
   else if(r.id === 'hearth'){ placeB('hearth'); P._hearthBuilt = true; }
   else if(r.id === 'tower'){ placeB('tower'); P._towerBuilt = true; }
+  else if(r.id === 'smelter'){ placeB('smelter'); P._smelterBuilt = true; }
   else { P.weapon = r.id; swapWeapon(r.id); }
   toast(`${r.ic} ${r.name}`);
   updateHUD(); renderTabs(); renderRecipes();
 }
 
-// ============ GATHER / ATTACK ============
+// ============ INTERACT ============
 const ray = new THREE.Raycaster();
-function gather(){
+function interact(){
   if(state !== 'play' || P.atkCd > 0) return;
   P.atkCd = 0.25; handSwing = 1; A.pick(); sound(0.15);
+
+  // Merchant proximity
+  const mDist = Math.hypot(P.pos.x - merchantPos.x, P.pos.z - merchantPos.z);
+  if(mDist < 4){
+    toggleShop();
+    return;
+  }
+
+  // Smeltery proximity
+  for(const b of builds){
+    if(b.type === 'smelter'){
+      const d = Math.hypot(b.x - P.pos.x, b.z - P.pos.z);
+      if(d < 4){
+        smelt();
+        return;
+      }
+    }
+  }
+
   if(P.inW){
     P.water = clamp(P.water + 18, 0, 100);
     toast('💧 Drank water'); updateHUD(); return;
@@ -897,6 +1077,7 @@ function gather(){
   ray.setFromCamera(new THREE.Vector2(0,0), camera);
   ray.far = REACH;
 
+  // Trees
   let h = ray.intersectObject(trunkI, false);
   if(h.length && h[0].instanceId !== undefined){
     const id = h[0].instanceId, t = trees[id];
@@ -909,6 +1090,7 @@ function gather(){
       updateHUD(); return;
     }
   }
+  // Rocks
   h = ray.intersectObject(rockI, false);
   if(h.length && h[0].instanceId !== undefined){
     const id = h[0].instanceId, r = rocks[id];
@@ -921,6 +1103,7 @@ function gather(){
       updateHUD(); return;
     }
   }
+  // Crystals
   h = ray.intersectObject(crystalI, false);
   if(h.length && h[0].instanceId !== undefined){
     const id = h[0].instanceId, c = crystals[id];
@@ -931,6 +1114,40 @@ function gather(){
       updateHUD(); return;
     }
   }
+  // ★ COAL
+  h = ray.intersectObject(coalI, false);
+  if(h.length && h[0].instanceId !== undefined){
+    const id = h[0].instanceId, c = ores.coal[id];
+    if(c && c.alive){
+      c.hp -= 1; spawnP(h[0].point, 0x1a1a1a, 8); A.ore();
+      if(c.hp <= 0){ c.alive = false; P.coal += 2;
+        hi(coalI, id); toast('⚫ +2 Coal'); }
+      updateHUD(); return;
+    }
+  }
+  // ★ IRON
+  h = ray.intersectObject(ironI, false);
+  if(h.length && h[0].instanceId !== undefined){
+    const id = h[0].instanceId, c = ores.iron[id];
+    if(c && c.alive){
+      c.hp -= 1; spawnP(h[0].point, 0x8a5a3a, 8); A.ore();
+      if(c.hp <= 0){ c.alive = false; P.iron += 2;
+        hi(ironI, id); toast('⛓️ +2 Iron'); }
+      updateHUD(); return;
+    }
+  }
+  // ★ GOLD ORE
+  h = ray.intersectObject(goldI, false);
+  if(h.length && h[0].instanceId !== undefined){
+    const id = h[0].instanceId, c = ores.gold[id];
+    if(c && c.alive){
+      c.hp -= 1; spawnP(h[0].point, 0xe6c86a, 10); A.crys();
+      if(c.hp <= 0){ c.alive = false; P.goldOre += 2;
+        hi(goldI, id); toast('🟡 +2 Gold Ore'); }
+      updateHUD(); return;
+    }
+  }
+  // Bushes
   h = ray.intersectObject(bushI, false);
   if(h.length && h[0].instanceId !== undefined){
     const id = h[0].instanceId, b = bushes[id];
@@ -938,6 +1155,7 @@ function gather(){
       hi(bushI, id); spawnP(h[0].point, 0x2a5a2a, 6); toast('🌿 +2 Herb');
       updateHUD(); return; }
   }
+  // Bones
   h = ray.intersectObject(boneI, false);
   if(h.length && h[0].instanceId !== undefined){
     const id = h[0].instanceId;
@@ -946,6 +1164,26 @@ function gather(){
   }
 }
 
+// ★ SMELTERY — convert ores to coins
+function smelt(){
+  const recipes = [
+    { in: 'goldOre', out: 'coins', rate: 1, name: 'Gold Ore → 10 Coins', amt: 10, need: 1 },
+    { in: 'iron',    out: 'coins', rate: 1, name: 'Iron → 2 Coins', amt: 2, need: 1 },
+    { in: 'coal',    out: 'coins', rate: 1, name: 'Coal → 1 Coin', amt: 1, need: 1 },
+  ];
+  // Find first available
+  let done = false;
+  if(P.goldOre >= 1){ P.goldOre -= 1; P.coins += 10; done = true;
+    toast('💰 Gold → 10 Coins'); A.smelt(); setTimeout(()=>A.coin(), 500); }
+  else if(P.iron >= 1){ P.iron -= 1; P.coins += 2; done = true;
+    toast('💰 Iron → 2 Coins'); A.smelt(); setTimeout(()=>A.coin(), 500); }
+  else if(P.coal >= 1){ P.coal -= 1; P.coins += 1; done = true;
+    toast('💰 Coal → 1 Coin'); A.smelt(); setTimeout(()=>A.coin(), 500); }
+  if(!done) toast('No ore to smelt');
+  updateHUD();
+}
+
+// ============ ATTACK ============
 function attack(){
   if(state !== 'play' || P.atkCd > 0) return;
   if(P.weapon === 'fists') return;
@@ -953,7 +1191,20 @@ function attack(){
   handSwing = 1;
   sound(P.weapon === 'chainsaw' ? 0.7 : 0.25);
   if(P.weapon === 'chainsaw') A.chain(); else A.swing();
-  const dmg = { axe:25, dagger:40, chainsaw:75 }[P.weapon] || 5;
+
+  if(P.weapon === 'bow'){
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.7,4),
+      new THREE.MeshBasicMaterial({ color:0x1a1a1a }));
+    const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw);
+    p.position.copy(P.pos).add(new THREE.Vector3(0,EYE,0)).addScaledVector(new THREE.Vector3(fx,0,fz), 0.6);
+    p.lookAt(p.position.x + fx, p.position.y, p.position.z + fz);
+    p.rotateX(Math.PI/2);
+    scene.add(p);
+    projs.push({ mesh: p, vx: fx*40, vz: fz*40, life: 2, dmg: 80 });
+    return;
+  }
+
+  const dmg = { axe:25, dagger:40, chainsaw:75, ironSword:60, mithril:110 }[P.weapon] || 5;
   const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw);
   let hit = false;
   for(let i = enemies.length-1; i >= 0; i--){
@@ -1011,7 +1262,7 @@ const ETYPES = {
   stalker: { hp:60,  spd:6.0, dmg:20, col:0x1a1a30, sz:0.9, glow:true, rw:()=>{P.ess+=2;toast('💧 +2');} },
   screamer:{ hp:90,  spd:3.0, dmg:8,  col:0x8a7a6a, sz:1.4, glow:true, scream:true, rw:()=>{P.ess+=2;toast('💧 +2');} },
   stitcher:{ hp:280, spd:2.5, dmg:25, col:0x6a2a2a, sz:2.0, glow:true, mini:true,
-             rw:()=>{P.ess+=5;P.bone+=5;P.crys+=2;toast('💧 +5 · 🦴 +5 · 💎 +2');} },
+             rw:()=>{P.ess+=5;P.bone+=5;P.crys+=2;toast('💧+5 · 🦴+5 · 💎+2');} },
 };
 
 function makeScreamer(){
@@ -1030,8 +1281,8 @@ function makeScreamer(){
     la.position.set(side*0.55, 1.9, 0.05); la.rotation.z = side*0.15; g.add(la);
   }
   for(const side of [-1,1]){
-    const th = new THREE.Mesh(new THREE.CapsuleGeometry(0.08,0.6,3,5), m);
-    th.position.set(side*0.13, 1.5, 0); g.add(th);
+    const th1 = new THREE.Mesh(new THREE.CapsuleGeometry(0.08,0.6,3,5), m);
+    th1.position.set(side*0.13, 1.5, 0); g.add(th1);
     const sh = new THREE.Mesh(new THREE.CapsuleGeometry(0.06,0.55,3,5), m);
     sh.position.set(side*0.13, 0.65, 0); g.add(sh);
   }
@@ -1188,6 +1439,22 @@ function placeB(type){
       new THREE.MeshStandardMaterial({ color:0x5a4a30 }));
     top.position.y = 3.35; g.add(top);
     b.towerCd = 0; b.radius = 15;
+  } else if(type === 'smelter'){
+    // Stone furnace
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.2, 1.6, 6),
+      new THREE.MeshStandardMaterial({ color:0x5a5a5a, roughness:0.9, flatShading:true }));
+    base.position.y = 0.8; g.add(base);
+    const chimney = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 1.2, 6),
+      new THREE.MeshStandardMaterial({ color:0x4a4a4a, roughness:0.9 }));
+    chimney.position.y = 2.2; g.add(chimney);
+    // Glowing opening
+    const open = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.1),
+      new THREE.MeshBasicMaterial({ color:0xff6020 }));
+    open.position.set(0, 0.7, 1.0); g.add(open);
+    // Fire light
+    const lt = new THREE.PointLight(0xff6020, 6, 12, 1.6);
+    lt.position.set(0, 1.2, 0.5); g.add(lt);
+    b.light = lt; b.radius = 8; b.smeltCd = 0;
   }
   scene.add(g); builds.push(b); A.place();
 }
@@ -1245,6 +1512,68 @@ function updTowers(dt){
   }
 }
 
+// ============ SHOP ============
+const SHOP_ITEMS = [
+  { id:'wood',   name:'10 Wood',   ic:'🪵', price:5,  give:{wood:10} },
+  { id:'stone',  name:'10 Stone',  ic:'🪨', price:4,  give:{stone:10} },
+  { id:'food',   name:'Full Food', ic:'🍖', price:3,  give:{food:100} },
+  { id:'water',  name:'Full Water',ic:'💧', price:3,  give:{water:100} },
+  { id:'iron',   name:'5 Iron',    ic:'⛓️', price:15, give:{iron:5} },
+  { id:'coal',   name:'5 Coal',    ic:'⚫', price:10, give:{coal:5} },
+  { id:'crys',   name:'3 Crystal', ic:'💎', price:25, give:{crys:3} },
+  { id:'axe',    name:'Stone Axe', ic:'🪓', price:20, give:{weapon:'axe'} },
+  { id:'dagger', name:'Shadow Dagger', ic:'🗡️', price:40, give:{weapon:'dagger'} },
+  { id:'ironSword', name:'Iron Sword', ic:'⚔️', price:80, give:{weapon:'ironSword'} },
+];
+
+let shopOpen = false;
+function toggleShop(){
+  if(state !== 'play') return;
+  shopOpen = !shopOpen;
+  $('shop').classList.toggle('hid', !shopOpen);
+  if(shopOpen){
+    renderShop();
+    if(document.pointerLockElement) document.exitPointerLock();
+  }
+}
+$('bCloseShop').onclick = toggleShop;
+
+function renderShop(){
+  $('shopCoins').textContent = P.coins;
+  const box = $('shopList'); box.innerHTML = '';
+  for(const it of SHOP_ITEMS){
+    const canBuy = P.coins >= it.price;
+    const d = document.createElement('div');
+    d.className = 'shop-item';
+    d.innerHTML = `
+      <div class="info">
+        <div class="name">${it.ic} ${it.name}</div>
+        <div class="desc">💰 ${it.price} coins</div>
+      </div>
+      <button ${canBuy?'':'disabled'}>${canBuy?'BUY':'NO'}</button>`;
+    if(canBuy) d.querySelector('button').onclick = () => buy(it);
+    box.appendChild(d);
+  }
+}
+function buy(it){
+  if(P.coins < it.price) return;
+  P.coins -= it.price;
+  if(it.give.weapon){
+    P.weapon = it.give.weapon;
+    swapWeapon(it.give.weapon);
+  } else {
+    for(const k in it.give){
+      if(k === 'food') P.food = clamp(P.food + it.give[k], 0, 100);
+      else if(k === 'water') P.water = clamp(P.water + it.give[k], 0, 100);
+      else P[k] = (P[k]||0) + it.give[k];
+    }
+  }
+  A.buy();
+  toast(`💰 Bought ${it.ic} ${it.name}`);
+  updateHUD();
+  renderShop();
+}
+
 // ============ ENEMY AI ============
 let spTimer = 2;
 function updEnemies(dt, day){
@@ -1276,7 +1605,6 @@ function updEnemies(dt, day){
     const dist = Math.hypot(dx,dz);
     if(e.flash > 0) e.flash -= dt;
 
-    // Safe zone check
     let inSafe = false;
     for(const b of builds){
       if(b.type === 'hearth' && Math.hypot(b.x - e.pos.x, b.z - e.pos.z) < b.radius)
@@ -1295,10 +1623,9 @@ function updEnemies(dt, day){
       continue;
     }
 
-    // Light check
     let inLight = false;
     for(const b of builds){
-      if((b.type === 'lantern' || b.type === 'campfire') && b.light){
+      if((b.type === 'lantern' || b.type === 'campfire' || b.type === 'smelter') && b.light){
         if(Math.hypot(b.x - e.pos.x, b.z - e.pos.z) < b.radius){ inLight = true; break; }
       }
     }
@@ -1315,7 +1642,6 @@ function updEnemies(dt, day){
       continue;
     }
 
-    // Screamer
     if(e.type === 'screamer' && dist < 40 && noise > 0.15 && dist < 10){
       e.screamCd -= dt;
       if(e.screamCd <= 0){
@@ -1330,7 +1656,6 @@ function updEnemies(dt, day){
       }
     }
 
-    // Stitcher drain
     if(e.type === 'stitcher' && dist < 4.5){
       e.drainT -= dt;
       if(e.drainT <= 0){
@@ -1571,8 +1896,9 @@ function startGame(){
   P.yaw = 0; P.pitch = 0;
   P.hp = 100; P.food = 100; P.water = 100; P.san = 100; P.sta = 100;
   P.wood = 0; P.stone = 0; P.bone = 0; P.herb = 0; P.ess = 0; P.crys = 0;
+  P.coal = 0; P.iron = 0; P.goldOre = 0; P.coins = 0;
   P.weapon = 'fists'; P.adren = 0;
-  P._hearthBuilt = false; P._towerBuilt = false;
+  P._hearthBuilt = false; P._towerBuilt = false; P._smelterBuilt = false;
   days = 1; siegeDay = 3; tod = 0.1;
   swapWeapon('fists');
   enemies.forEach(e => scene.remove(e.mesh)); enemies.length = 0;
@@ -1588,7 +1914,7 @@ function startGame(){
 function die(){
   state = 'dead'; A.die();
   $('deadStats').textContent =
-    `🪵 ${P.wood} · 🪨 ${P.stone} · 🦴 ${P.bone} · 💎 ${P.crys}`;
+    `🪵 ${P.wood} · 🪨 ${P.stone} · ⛓️ ${P.iron} · 💰 ${P.coins}`;
   $('dead').classList.remove('hid');
   if(document.pointerLockElement) document.exitPointerLock();
 }
@@ -1599,6 +1925,7 @@ function respawn(){
   P.hp = 100; P.food = 100; P.water = 100; P.san = 100; P.sta = 100;
   P.wood = Math.floor(P.wood*0.5);
   P.stone = Math.floor(P.stone*0.5);
+  P.iron = Math.floor(P.iron*0.5);
   $('dead').classList.add('hid');
   state = 'play';
   updateHUD();
@@ -1635,15 +1962,18 @@ function loop(){
       if(b.crystal) b.crystal.rotation.y += dt*0.8;
       if(b.dome) b.dome.rotation.y += dt*0.1;
     }
+
+    // Merchant idle animation
+    merchantGroup.rotation.y = Math.sin(now*0.0008)*0.1;
+
     updateHUD();
   } else updParts(dt);
 
   renderer.render(scene, camera);
 }
-
-console.log('Starting game loop...');
+console.log('Game starting...');
 loop();
-console.log('Game initialized OK');
+console.log('OK');
 </script>
 </body>
 </html>
