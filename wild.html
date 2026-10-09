@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Wild Frontier</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;touch-action:none}
+body{overflow:hidden;background:#000;color:#fff;font-family:system-ui,sans-serif;user-select:none}
+canvas{display:block}
+#hud{position:fixed;top:12px;left:12px;z-index:10;font-size:13px;text-shadow:0 2px 6px #000;line-height:1.7;pointer-events:none}
+#hud .row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+#hud .bar{width:130px;height:10px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.25);border-radius:5px;overflow:hidden}
+#hud .bar i{display:block;height:100%;transition:width .25s}
+#hp i{background:linear-gradient(90deg,#c0392b,#e74c3c)}
+#fd i{background:linear-gradient(90deg,#d68910,#f39c12)}
+#wt i{background:linear-gradient(90deg,#2471a3,#3498db)}
+#time{position:fixed;top:12px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.55);padding:6px 16px;border-radius:14px;
+  font-size:12px;letter-spacing:1px;z-index:10;backdrop-filter:blur(6px)}
+#inv{position:fixed;top:12px;right:12px;background:rgba(0,0,0,.55);
+  padding:10px 14px;border-radius:10px;font-size:12px;line-height:1.8;
+  z-index:10;backdrop-filter:blur(6px);min-width:140px}
+#inv .it{display:flex;justify-content:space-between;gap:12px}
+#inv .it b{color:#e6c86a}
+#cross{position:fixed;top:50%;left:50%;width:20px;height:20px;margin:-10px 0 0 -10px;
+  z-index:5;pointer-events:none;transition:transform .1s}
+#cross .ring{position:absolute;inset:0;border:1.5px solid rgba(255,255,255,.7);
+  border-radius:50%;box-shadow:0 0 6px rgba(0,0,0,.6)}
+#cross .dot{position:absolute;top:50%;left:50%;width:3px;height:3px;
+  background:#fff;margin:-1.5px;border-radius:50%;box-shadow:0 0 4px #000}
+#cross.hit .ring{border-color:#e74c3c;transform:scale(1.4)}
+#toast{position:fixed;top:22%;left:50%;transform:translateX(-50%) translateY(-10px);
+  background:rgba(10,10,20,.9);padding:10px 22px;border-radius:22px;
+  font-size:14px;opacity:0;transition:opacity .3s,transform .3s;z-index:20;
+  white-space:nowrap;pointer-events:none;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1)}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+#hint{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);
+  font-size:11px;color:#aaa;text-shadow:0 2px 6px #000;z-index:10;text-align:center;line-height:1.6}
+#menu{position:fixed;inset:0;z-index:100;
+  background:radial-gradient(ellipse at center,#1a3050 0%,#0a1220 60%,#000 100%);
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  gap:20px;text-align:center;padding:24px;transition:opacity .4s}
+#menu.hide{opacity:0;pointer-events:none}
+#menu h1{font-size:38px;letter-spacing:8px;font-weight:900;
+  background:linear-gradient(180deg,#f5d9a8,#8a3a20);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:0 4px 30px rgba(200,150,80,.3)}
+#menu .sub{color:#a89070;font-size:11px;letter-spacing:6px;margin-top:-14px}
+#menu p{color:#8899aa;font-size:13px;max-width:400px;line-height:1.7}
+#menu button{padding:16px 60px;font-size:17px;font-weight:700;letter-spacing:3px;
+  background:linear-gradient(180deg,#6a2020,#3a0e0e);color:#fff;
+  border:2px solid #c0392b;border-radius:12px;cursor:pointer;
+  box-shadow:0 8px 30px rgba(192,57,43,.4);transition:transform .1s}
+#menu button:hover{background:linear-gradient(180deg,#8a2a2a,#4a1818)}
+#menu button:active{transform:scale(.97)}
+#menu .info{margin-top:14px;font-size:11px;color:#666;line-height:2;max-width:380px}
+#menu .info b{color:#e6c86a}
+#joy{position:fixed;width:120px;height:120px;
+  border:2px solid rgba(255,255,255,.28);border-radius:50%;display:none;
+  pointer-events:none;z-index:15;transform:translate(-50%,-50%);
+  background:radial-gradient(circle,rgba(255,255,255,.1),rgba(255,255,255,.02));
+  backdrop-filter:blur(4px)}
+#joyK{position:absolute;top:50%;left:50%;width:52px;height:52px;
+  background:rgba(255,255,255,.4);border:2px solid rgba(255,255,255,.6);
+  border-radius:50%;transform:translate(-50%,-50%);
+  box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.tb{position:fixed;border-radius:50%;background:rgba(10,15,25,.7);
+  border:2px solid rgba(255,255,255,.3);color:#fff;font-size:10px;
+  font-weight:700;display:flex;align-items:center;justify-content:center;
+  z-index:15;cursor:pointer;letter-spacing:1px;backdrop-filter:blur(6px);
+  box-shadow:0 4px 12px rgba(0,0,0,.4);transition:transform .08s}
+.tb:active{transform:scale(.92);background:rgba(160,40,40,.7)}
+#btnE{right:14px;bottom:100px;width:70px;height:70px;font-size:11px}
+#btnF{right:14px;bottom:22px;width:70px;height:70px;font-size:11px}
+#btnJ{right:96px;bottom:22px;width:60px;height:60px;font-size:14px}
+#btnT{right:96px;bottom:98px;width:60px;height:60px;font-size:11px}
+#wep{position:fixed;bottom:14px;left:14px;background:rgba(0,0,0,.55);
+  padding:6px 14px;border-radius:8px;font-size:12px;z-index:10;
+  backdrop-filter:blur(6px)}
+#wep b{color:#e6c86a}
+#vig{position:fixed;inset:0;pointer-events:none;z-index:4;
+  background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,.55) 100%);
+  opacity:.6}
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div class="row"><span>❤️</span><div class="bar" id="hp"><i style="width:100%"></i></div></div>
+  <div class="row"><span>🍖</span><div class="bar" id="fd"><i style="width:100%"></i></div></div>
+  <div class="row"><span>💧</span><div class="bar" id="wt"><i style="width:100%"></i></div></div>
+</div>
+<div id="time">☀️ Day 1</div>
+<div id="inv">
+  <div class="it"><span>🪵 Wood</span><b id="cWood">0</b></div>
+  <div class="it"><span>🪨 Stone</span><b id="cStone">0</b></div>
+  <div class="it"><span>🦴 Bone</span><b id="cBone">0</b></div>
+  <div class="it"><span>⚫ Coal</span><b id="cCoal">0</b></div>
+  <div class="it"><span>💰 Coins</span><b id="cCoin">0</b></div>
+</div>
+<div id="cross"><div class="ring"></div><div class="dot"></div></div>
+<div id="toast"></div>
+<div id="vig"></div>
+<div id="wep">⚔️ <b id="wepName">Bare Hands</b></div>
+<div id="hint">WASD · Shift sprint · Space jump · E take · F attack · T tame/ride</div>
+
+<div id="joy"><div id="joyK"></div></div>
+<button class="tb" id="btnE">E<br>TAKE</button>
+<button class="tb" id="btnF">F<br>HIT</button>
+<button class="tb" id="btnJ">JUMP</button>
+<button class="tb" id="btnT">T<br>TAME</button>
+
+<div id="menu">
+  <h1>WILD FRONTIER</h1>
+  <div class="sub">SURVIVAL</div>
+  <p>Gather by day. Survive by night. Tame the beasts of the forest.</p>
+  <button id="startBtn">▶ ENTER THE WILD</button>
+  <div class="info">
+    <b>Desktop:</b> WASD move · Shift sprint · Mouse look · E gather · F hit · T tame<br>
+    <b>Mobile:</b> Left joystick · Right look · Buttons bottom-right
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════
+// SETUP
+// ═══════════════════════════════════════════════════════
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 500);
+camera.rotation.order = 'YXZ';
+
+const renderer = new THREE.WebGLRenderer({antialias: true, powerPreference: 'high-performance'});
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+document.body.appendChild(renderer.domElement);
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ═══════════════════════════════════════════════════════
+// SKY + FOG
+// ═══════════════════════════════════════════════════════
+scene.background = new THREE.Color(0x87b8d8);
+scene.fog = new THREE.Fog(0x87b8d8, 50, 180);
+
+// Stars (only visible at night)
+const starsGeo = new THREE.BufferGeometry();
+const starPos = [];
+for (let i = 0; i < 500; i++) {
+  const theta = Math.random() * Math.PI * 2;
+  const phi = Math.acos(Math.random() * 0.9 + 0.05);
+  const r = 400;
+  starPos.push(
+    r * Math.sin(phi) * Math.cos(theta),
+    r * Math.cos(phi),
+    r * Math.sin(phi) * Math.sin(theta)
+  );
+}
+starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+const stars = new THREE.Points(starsGeo, new THREE.PointsMaterial({
+  color: 0xffffff, size: 2, sizeAttenuation: false, transparent: true, opacity: 0
+}));
+scene.add(stars);
+
+// ═══════════════════════════════════════════════════════
+// LIGHTS
+// ═══════════════════════════════════════════════════════
+const hemi = new THREE.HemisphereLight(0xa0c8ff, 0x3a2a18, 0.8);
+scene.add(hemi);
+
+const sun = new THREE.DirectionalLight(0xfff0d0, 1.5);
+sun.position.set(60, 100, 40);
+sun.castShadow = true;
+sun.shadow.mapSize.width = 2048;
+sun.shadow.mapSize.height = 2048;
+sun.shadow.camera.left = -60;
+sun.shadow.camera.right = 60;
+sun.shadow.camera.top = 60;
+sun.shadow.camera.bottom = -60;
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 200;
+sun.shadow.bias = -0.0005;
+scene.add(sun);
+scene.add(sun.target);
+
+const amb = new THREE.AmbientLight(0xffffff, 0.25);
+scene.add(amb);
+
+// ═══════════════════════════════════════════════════════
+// TERRAIN
+// ═══════════════════════════════════════════════════════
+function terrainH(x, z) {
+  let h = Math.sin(x * 0.04) * Math.cos(z * 0.04) * 3;
+  h += Math.sin(x * 0.12) * Math.cos(z * 0.14) * 1.2;
+  h += Math.sin(x * 0.02 + z * 0.03) * 4;
+  h += Math.cos(x * 0.08 + z * 0.06) * 1.5;
+  // Flat spawn
+  const d = Math.hypot(x, z);
+  if (d < 12) h *= d / 12;
+  return h;
+}
+
+const GROUND_SIZE = 220;
+const SEG = 100;
+const terrainGeo = new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE, SEG, SEG);
+terrainGeo.rotateX(-Math.PI / 2);
+{
+  const pos = terrainGeo.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  const c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), z = pos.getZ(i);
+    const y = terrainH(x, z);
+    pos.setY(i, y);
+    
+    // Color by height
+    if (y < -1) c.setHex(0x6a5a30);       // sand
+    else if (y < 2) c.setHex(0x4a7c3a);   // grass
+    else if (y < 6) c.setHex(0x3a6a2a);   // dark grass
+    else if (y < 10) c.setHex(0x6a7a5a);  // high grass
+    else c.setHex(0x8a8878);              // rock
+    
+    // Slight variation
+    const n = 0.85 + Math.random() * 0.3;
+    colors[i*3] = c.r * n;
+    colors[i*3+1] = c.g * n;
+    colors[i*3+2] = c.b * n;
+  }
+  terrainGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  terrainGeo.computeVertexNormals();
+}
+const terrain = new THREE.Mesh(terrainGeo, new THREE.MeshLambertMaterial({
+  vertexColors: true, flatShading: false
+}));
+terrain.receiveShadow = true;
+scene.add(terrain);
+
+// Water
+const waterGeo = new THREE.PlaneGeometry(400, 400);
+waterGeo.rotateX(-Math.PI / 2);
+const water = new THREE.Mesh(waterGeo, new THREE.MeshStandardMaterial({
+  color: 0x2a6a9a, transparent: true, opacity: 0.75,
+  roughness: 0.15, metalness: 0.7
+}));
+water.position.y = -2;
+water.receiveShadow = true;
+scene.add(water);
+
+// ═══════════════════════════════════════════════════════
+// WORLD OBJECTS
+// ═══════════════════════════════════════════════════════
+const collectibles = [];
+const animals = [];
+const enemies = [];
+
+// ─── TREE ───────────────────────────────────────
+function makeTree(x, z) {
+  const y = terrainH(x, z);
+  const g = new THREE.Group();
+  
+  const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5a3a1a });
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.45, 4, 6), trunkMat);
+  trunk.position.y = 2;
+  trunk.castShadow = true;
+  g.add(trunk);
+  
+  const leafDark = new THREE.MeshLambertMaterial({ color: 0x1a4a1a, flatShading: true });
+  const leafMid = new THREE.MeshLambertMaterial({ color: 0x2a6a2a, flatShading: true });
+  const leafLight = new THREE.MeshLambertMaterial({ color: 0x3a8a3a, flatShading: true });
+  const leafMats = [leafDark, leafMid, leafLight];
+  
+  for (let i = 0; i < 3; i++) {
+    const size = 2.2 - i * 0.45;
+    const leaves = new THREE.Mesh(
+      new THREE.ConeGeometry(size, 2.8, 7),
+      leafMats[i]
+    );
+    leaves.position.y = 3.5 + i * 1.4;
+    leaves.castShadow = true;
+    g.add(leaves);
+  }
+  
+  g.position.set(x, y, z);
+  g.rotation.y = Math.random() * Math.PI * 2;
+  g.userData = { type: 'tree', hp: 3 };
+  scene.add(g);
+  collectibles.push(g);
+}
+
+// ─── ROCK ───────────────────────────────────────
+function makeRock(x, z, oreType = 'rock') {
+  const y = terrainH(x, z);
+  const colorMap = {
+    rock: 0x7a7a78, coal: 0x1a1a1a, iron: 0x9a6a4a, gold: 0xd4a840
+  };
+  const rock = new THREE.Mesh(
+    new THREE.DodecahedronGeometry(0.8 + Math.random() * 0.5, 0),
+    new THREE.MeshLambertMaterial({
+      color: colorMap[oreType], flatShading: true
+    })
+  );
+  rock.position.set(x, y + 0.5, z);
+  rock.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+  rock.castShadow = true;
+  rock.receiveShadow = true;
+  rock.userData = { type: oreType, hp: oreType === 'rock' ? 3 : 4 };
+  scene.add(rock);
+  collectibles.push(rock);
+  
+  // Ore glow
+  if (oreType === 'gold' || oreType === 'iron') {
+    const light = new THREE.PointLight(oreType === 'gold' ? 0xffc860 : 0xffa050, 1.2, 5);
+    light.position.copy(rock.position);
+    light.position.y += 0.5;
+    scene.add(light);
+  }
+}
+
+// ─── BUSH ───────────────────────────────────────
+function makeBush(x, z) {
+  const y = terrainH(x, z);
+  const bush = new THREE.Group();
+  const mat = new THREE.MeshLambertMaterial({ color: 0x2a5a2a, flatShading: true });
+  for (let i = 0; i < 3; i++) {
+    const blob = new THREE.Mesh(new THREE.SphereGeometry(0.5, 6, 5), mat);
+    blob.position.set(
+      (Math.random() - 0.5) * 0.6,
+      0.4 + Math.random() * 0.3,
+      (Math.random() - 0.5) * 0.6
+    );
+    blob.castShadow = true;
+    bush.add(blob);
+  }
+  // Berries
+  const berryMat = new THREE.MeshLambertMaterial({ color: 0xc0392b });
+  for (let i = 0; i < 4; i++) {
+    const berry = new THREE.Mesh(new THREE.SphereGeometry(0.08, 5, 4), berryMat);
+    berry.position.set(
+      (Math.random() - 0.5) * 0.8,
+      0.5 + Math.random() * 0.3,
+      (Math.random() - 0.5) * 0.8
+    );
+    bush.add(berry);
+  }
+  bush.position.set(x, y, z);
+  bush.userData = { type: 'bush', hp: 2 };
+  scene.add(bush);
+  collectibles.push(bush);
+}
+
+// ─── BONE ───────────────────────────────────────
+function makeBone(x, z) {
+  const y = terrainH(x, z);
+  const bone = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.08, 0.08, 0.7, 6),
+    new THREE.MeshLambertMaterial({ color: 0xe8d8a8 })
+  );
+  bone.rotation.z = Math.PI / 2;
+  bone.rotation.y = Math.random() * 3;
+  bone.position.set(x, y + 0.15, z);
+  bone.castShadow = true;
+  bone.userData = { type: 'bone', hp: 1 };
+  scene.add(bone);
+  collectibles.push(bone);
+}
+
+// Place everything
+const randIn = (min, max) => min + Math.random() * (max - min);
+const farFromSpawn = (x, z) => Math.hypot(x, z) > 12;
+
+// Trees
+for (let i = 0; i < 80; i++) {
+  const x = randIn(-95, 95);
+  const z = randIn(-95, 95);
+  if (!farFromSpawn(x, z)) continue;
+  // Avoid cave zone at x>60
+  if (x > 60) continue;
+  makeTree(x, z);
+}
+// Rocks
+for (let i = 0; i < 50; i++) {
+  const x = randIn(-95, 95);
+  const z = randIn(-95, 95);
+  if (!farFromSpawn(x, z)) continue;
+  makeRock(x, z, 'rock');
+}
+// Ores in cave zone (x > 55)
+for (let i = 0; i < 20; i++) {
+  const x = randIn(55, 90);
+  const z = randIn(-80, 80);
+  makeRock(x, z, 'coal');
+}
+for (let i = 0; i < 12; i++) {
+  const x = randIn(70, 95);
+  const z = randIn(-70, 70);
+  makeRock(x, z, 'iron');
+}
+for (let i = 0; i < 6; i++) {
+  const x = randIn(80, 95);
+  const z = randIn(-50, 50);
+  makeRock(x, z, 'gold');
+}
+// Bushes
+for (let i = 0; i < 40; i++) {
+  const x = randIn(-95, 95);
+  const z = randIn(-95, 95);
+  if (!farFromSpawn(x, z)) continue;
+  if (x > 60) continue;
+  makeBush(x, z);
+}
+// Bones
+for (let i = 0; i < 20; i++) {
+  const x = randIn(-95, 95);
+  const z = randIn(-95, 95);
+  if (!farFromSpawn(x, z)) continue;
+  makeBone(x, z);
+}
+
+// ═══════════════════════════════════════════════════════
+// CAVE ZONE GLOW (eastern area with purple crystals)
+// ═══════════════════════════════════════════════════════
+for (let i = 0; i < 8; i++) {
+  const x = randIn(55, 90);
+  const z = randIn(-70, 70);
+  const crystal = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.6, 0),
+    new THREE.MeshStandardMaterial({
+      color: 0x9a5adf, emissive: 0x6a2adf, emissiveIntensity: 2.0,
+      roughness: 0.2, flatShading: true
+    })
+  );
+  crystal.position.set(x, terrainH(x, z) + 0.8, z);
+  crystal.castShadow = true;
+  scene.add(crystal);
+  const light = new THREE.PointLight(0x9a5adf, 3, 10, 2);
+  light.position.copy(crystal.position);
+  light.position.y += 1;
+  scene.add(light);
+}
+
+// ═══════════════════════════════════════════════════════
+// MERCHANT CAMP
+// ═══════════════════════════════════════════════════════
+const merchantPos = { x: 25, z: 25 };
+{
+  const y = terrainH(merchantPos.x, merchantPos.z);
+  const g = new THREE.Group();
+  
+  // Tent
+  const tent = new THREE.Mesh(
+    new THREE.ConeGeometry(2.5, 3.2, 4),
+    new THREE.MeshLambertMaterial({ color: 0x6a1a1a, flatShading: true })
+  );
+  tent.position.y = 1.6;
+  tent.rotation.y = Math.PI / 4;
+  tent.castShadow = true;
+  g.add(tent);
+  
+  // Merchant NPC
+  const npc = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.35, 0.9, 4, 6),
+    new THREE.MeshLambertMaterial({ color: 0x6a3a5a })
+  );
+  body.position.y = 0.9;
+  body.castShadow = true;
+  npc.add(body);
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.28, 8, 6),
+    new THREE.MeshLambertMaterial({ color: 0xf0c8a0 })
+  );
+  head.position.y = 1.7;
+  head.castShadow = true;
+  npc.add(head);
+  npc.position.set(-1.5, 0, 1);
+  g.add(npc);
+  
+  // Campfire glow
+  const light = new THREE.PointLight(0xff8030, 4, 12, 2);
+  light.position.set(0, 1.5, 0);
+  g.add(light);
+  const flame = new THREE.Mesh(
+    new THREE.ConeGeometry(0.3, 0.8, 6),
+    new THREE.MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0.8 })
+  );
+  flame.position.y = 0.5;
+  g.add(flame);
+  
+  g.position.set(merchantPos.x, y, merchantPos.z);
+  scene.add(g);
+}
+
+// ═══════════════════════════════════════════════════════
+// ANIMALS
+// ═══════════════════════════════════════════════════════
+const ANIMAL_TYPES = {
+  boar:  { color: 0x4a2a1a, hp: 50, speed: 3.5, dmg: 8,  name: 'Boar',  trustMax: 3, scale: 1.0 },
+  wolf:  { color: 0x505058, hp: 40, speed: 5.5, dmg: 10, name: 'Wolf',  trustMax: 4, scale: 0.95 },
+  deer:  { color: 0xa06a3a, hp: 30, speed: 7.0, dmg: 0,  name: 'Deer',  trustMax: 2, scale: 1.0 },
+  horse: { color: 0x6a4a2a, hp: 70, speed: 4.5, dmg: 0,  name: 'Horse', trustMax: 5, scale: 1.2, rideable: true }
+};
+
+function makeAnimal(type, x, z) {
+  const t = ANIMAL_TYPES[type];
+  const y = terrainH(x, z);
+  const g = new THREE.Group();
+  const mat = new THREE.MeshLambertMaterial({ color: t.color, flatShading: true });
+  
+  const bodies = {
+    boar: () => {
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 0.9, 4, 8), mat);
+      body.rotation.z = Math.PI / 2;
+      body.position.y = 0.7;
+      body.castShadow = true;
+      g.add(body);
+      const head = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.7, 6), mat);
+      head.rotation.z = -Math.PI / 2;
+      head.position.set(-0.9, 0.7, 0);
+      head.castShadow = true;
+      g.add(head);
+      // Tusks
+      const tuskMat = new THREE.MeshLambertMaterial({ color: 0xe8d8b0 });
+      for (const sz of [-0.12, 0.12]) {
+        const tusk = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.25, 4), tuskMat);
+        tusk.rotation.z = -Math.PI / 2;
+        tusk.position.set(-1.2, 0.7, sz);
+        g.add(tusk);
+      }
+    },
+    wolf: () => {
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.35, 0.9, 4, 8), mat);
+      body.rotation.z = Math.PI / 2;
+      body.position.y = 0.65;
+      body.castShadow = true;
+      g.add(body);
+      const head = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.65, 6), mat);
+      head.rotation.z = -Math.PI / 2;
+      head.position.set(-0.75, 0.75, 0);
+      head.castShadow = true;
+      g.add(head);
+      // Ears
+      const earMat = new THREE.MeshLambertMaterial({ color: 0x35353a });
+      for (const sz of [-0.12, 0.12]) {
+        const ear = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.2, 4), earMat);
+        ear.position.set(-0.6, 1.05, sz);
+        g.add(ear);
+      }
+      // Eyes glow
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffaa30 });
+      for (const sz of [-0.13, 0.13]) {
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 5), eyeMat);
+        eye.position.set(-0.9, 0.8, sz);
+        g.add(eye);
+      }
+    },
+    deer: () => {
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1.0, 4, 8), mat);
+      body.rotation.z = Math.PI / 2;
+      body.position.y = 1.1;
+      body.castShadow = true;
+      g.add(body);
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.7, 6), mat);
+      neck.rotation.z = 0.4;
+      neck.position.set(-0.7, 1.55, 0);
+      g.add(neck);
+      const head = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 6), mat);
+      head.rotation.z = -Math.PI / 2;
+      head.position.set(-1.0, 1.75, 0);
+      g.add(head);
+      // Antlers
+      const antMat = new THREE.MeshLambertMaterial({ color: 0x6a5a4a });
+      for (const sz of [-0.1, 0.1]) {
+        const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.7, 4), antMat);
+        ant.position.set(-1.0, 2.15, sz);
+        ant.rotation.z = sz > 0 ? -0.3 : 0.3;
+        g.add(ant);
+      }
+    },
+    horse: () => {
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 1.3, 4, 8), mat);
+      body.rotation.z = Math.PI / 2;
+      body.position.y = 1.3;
+      body.castShadow = true;
+      g.add(body);
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.9, 6), mat);
+      neck.rotation.z = 0.5;
+      neck.position.set(-0.85, 1.75, 0);
+      g.add(neck);
+      const head = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.5, 4, 6), mat);
+      head.rotation.z = -Math.PI / 2;
+      head.position.set(-1.3, 1.95, 0);
+      g.add(head);
+      // Mane
+      const maneMat = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
+      for (let i = 0; i < 5; i++) {
+        const mane = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 0.08), maneMat);
+        mane.position.set(-0.7 + i * 0.15, 1.95 + i * 0.04, 0);
+        g.add(mane);
+      }
+    }
+  };
+  
+  bodies[type]();
+  
+  // Legs
+  const legMat = new THREE.MeshLambertMaterial({ color: t.color });
+  const legH = type === 'horse' ? 1.2 : (type === 'deer' ? 1.0 : 0.65);
+  const legY = legH / 2;
+  for (const dx of [-0.4, 0.4]) for (const dz of [-0.25, 0.25]) {
+    const leg = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08, 0.08, legH, 5),
+      legMat
+    );
+    leg.position.set(dx, legY, dz);
+    leg.castShadow = true;
+    g.add(leg);
+  }
+  
+  g.scale.setScalar(t.scale);
+  g.position.set(x, y, z);
+  scene.add(g);
+  
+  animals.push({
+    type, mesh: g, x, z, y,
+    hp: t.hp, maxHp: t.hp, speed: t.speed, dmg: t.dmg,
+    trust: 0, trustMax: t.trustMax, tamed: false, mounted: false,
+    wanderAngle: Math.random() * 6.28, wanderTimer: 0,
+    atkCd: 0, homeX: x, homeZ: z, walkT: 0
+  });
+}
+
+// Spawn initial animals
+for (let i = 0; i < 12; i++) {
+  const types = ['boar', 'wolf', 'deer', 'horse'];
+  const type = types[Math.floor(Math.random() * types.length)];
+  const x = randIn(-90, 90);
+  const z = randIn(-90, 90);
+  if (!farFromSpawn(x, z)) continue;
+  if (Math.hypot(x - merchantPos.x, z - merchantPos.z) < 10) continue;
+  makeAnimal(type, x, z);
+}
+
+// ═══════════════════════════════════════════════════════
+// FIRST-PERSON HAND/WEAPON
+// ═══════════════════════════════════════════════════════
+const handGroup = new THREE.Group();
+camera.add(handGroup);
+
+function makeWeaponModel(name) {
+  const g = new THREE.Group();
+  
+  if (name === 'fists') {
+    const skin = new THREE.MeshLambertMaterial({ color: 0x9a6a3a });
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.5), skin);
+    arm.position.set(0.3, -0.28, -0.55);
+    arm.rotation.set(0.1, 0.35, 0.15);
+    g.add(arm);
+    const fist = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 5), skin);
+    fist.position.set(0.4, -0.32, -0.75);
+    g.add(fist);
+  } else if (name === 'axe') {
+    const wood = new THREE.MeshLambertMaterial({ color: 0x5a3a20 });
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.7, 6), wood);
+    handle.rotation.z = Math.PI / 2;
+    handle.rotation.x = 0.3;
+    handle.position.set(0.3, -0.3, -0.6);
+    g.add(handle);
+    const metal = new THREE.MeshLambertMaterial({ color: 0x8a8a90, flatShading: true });
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.18, 0.06), metal);
+    head.position.set(0.55, -0.25, -0.75);
+    g.add(head);
+  } else if (name === 'sword') {
+    const steel = new THREE.MeshLambertMaterial({ color: 0xd0d0d8, metalness: 0.8 });
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.75, 0.02), steel);
+    blade.position.set(0.3, -0.2, -0.7);
+    blade.rotation.set(0.2, 0.3, 0.25);
+    g.add(blade);
+    const hilt = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.05, 0.05), 
+      new THREE.MeshLambertMaterial({ color: 0x2a1a0a }));
+    hilt.position.set(0.3, -0.35, -0.45);
+    hilt.rotation.set(0.2, 0.3, 0.25);
+    g.add(hilt);
+  }
+  
+  return g;
+}
+
+const weaponModels = {
+  fists: makeWeaponModel('fists'),
+  axe: makeWeaponModel('axe'),
+  sword: makeWeaponModel('sword')
+};
+let currentHand = weaponModels.fists;
+handGroup.add(currentHand);
+
+// ═══════════════════════════════════════════════════════
+// PLAYER
+// ═══════════════════════════════════════════════════════
+const EYE_HEIGHT = 1.7;
+const GRAVITY = 22;
+const WALK_SPEED = 5;
+const RUN_SPEED = 8;
+const JUMP_V = 8.5;
+
+const player = {
+  x: 0, y: EYE_HEIGHT, z: 0,
+  vy: 0, yaw: 0, pitch: 0,
+  hp: 100, food: 100, water: 100,
+  wood: 0, stone: 0, bone: 0, coal: 0, coins: 0,
+  weapon: 'fists', onGround: true,
+  cooldown: 0, bob: 0,
+  companion: null, mounted: null,
+  isSprinting: false
+};
+
+// ═══════════════════════════════════════════════════════
+// INPUT
+// ═══════════════════════════════════════════════════════
+const keys = {};
+const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'Space') { e.preventDefault(); tryJump(); }
+  if (e.code === 'KeyE') gather();
+  if (e.code === 'KeyF') attack();
+  if (e.code === 'KeyT') tameOrRide();
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+
+renderer.domElement.addEventListener('click', () => {
+  if (!isTouch && document.pointerLockElement !== renderer.domElement) {
+    renderer.domElement.requestPointerLock();
+  }
+});
+addEventListener('mousemove', e => {
+  if (document.pointerLockElement === renderer.domElement) {
+    player.yaw -= e.movementX * 0.002;
+    player.pitch = Math.max(-1.4, Math.min(1.4, player.pitch - e.movementY * 0.002));
+  }
+});
+
+// Touch
+let joyId = null, lookId = null;
+let joyStart = { x: 0, y: 0 }, joyVec = { x: 0, y: 0 };
+let lookLast = { x: 0, y: 0 };
+const joyEl = document.getElementById('joy');
+const joyK = document.getElementById('joyK');
+
+renderer.domElement.addEventListener('touchstart', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.clientX < innerWidth / 2 && joyId === null) {
+      joyId = t.identifier;
+      joyStart = { x: t.clientX, y: t.clientY };
+      joyEl.style.left = t.clientX + 'px';
+      joyEl.style.top = t.clientY + 'px';
+      joyEl.style.display = 'block';
+    } else if (lookId === null && t.clientX >= innerWidth / 2) {
+      lookId = t.identifier;
+      lookLast = { x: t.clientX, y: t.clientY };
+    }
+  }
+}, { passive: false });
+
+renderer.domElement.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier === joyId) {
+      const dx = t.clientX - joyStart.x;
+      const dy = t.clientY - joyStart.y;
+      const d = Math.hypot(dx, dy);
+      const max = 55;
+      const kx = d > max ? dx / d * max : dx;
+      const ky = d > max ? dy / d * max : dy;
+      joyK.style.left = 'calc(50% + ' + kx + 'px)';
+      joyK.style.top = 'calc(50% + ' + ky + 'px)';
+      joyVec = { x: kx / max, y: ky / max };
+    } else if (t.identifier === lookId) {
+      player.yaw -= (t.clientX - lookLast.x) * 0.006;
+      player.pitch = Math.max(-1.4, Math.min(1.4, player.pitch - (t.clientY - lookLast.y) * 0.006));
+      lookLast = { x: t.clientX, y: t.clientY };
+    }
+  }
+}, { passive: false });
+
+renderer.domElement.addEventListener('touchend', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier === joyId) {
+      joyId = null; joyVec = { x: 0, y: 0 };
+      joyEl.style.display = 'none';
+      joyK.style.left = '50%';
+      joyK.style.top = '50%';
+    }
+    if (t.identifier === lookId) lookId = null;
+  }
+}, { passive: false });
+
+document.getElementById('btnE').onclick = gather;
+document.getElementById('btnF').onclick = attack;
+document.getElementById('btnJ').onclick = tryJump;
+document.getElementById('btnT').onclick = tameOrRide;
+
+function tryJump() {
+  if (player.onGround && !player.mounted) player.vy = JUMP_V;
+}
+
+// ═══════════════════════════════════════════════════════
+// UI
+// ═══════════════════════════════════════════════════════
+let toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('on'), 1500);
+}
+
+function updateHUD() {
+  document.querySelector('#hp i').style.width = player.hp + '%';
+  document.querySelector('#fd i').style.width = player.food + '%';
+  document.querySelector('#wt i').style.width = player.water + '%';
+  document.getElementById('cWood').textContent = player.wood;
+  document.getElementById('cStone').textContent = player.stone;
+  document.getElementById('cBone').textContent = player.bone;
+  document.getElementById('cCoal').textContent = player.coal;
+  document.getElementById('cCoin').textContent = player.coins;
+  const names = { fists: 'Bare Hands', axe: 'Stone Axe', sword: 'Iron Sword' };
+  document.getElementById('wepName').textContent = names[player.weapon] || player.weapon;
+}
+
+// ═══════════════════════════════════════════════════════
+// GATHER / ATTACK
+// ═══════════════════════════════════════════════════════
+const raycaster = new THREE.Raycaster();
+
+function gather() {
+  if (player.cooldown > 0) return;
+  player.cooldown = 0.25;
+  
+  // Merchant check
+  const md = Math.hypot(player.x - merchantPos.x, player.z - merchantPos.z);
+  if (md < 4) {
+    if (player.coal >= 1) {
+      player.coal -= 1;
+      player.coins += 5;
+      toast('💰 Sold 1 coal → 5 coins');
+    } else if (player.coins >= 3) {
+      player.coins -= 3;
+      player.food = Math.min(100, player.food + 30);
+      toast('💰 Bought food');
+    } else {
+      toast('Trade: coal → coins');
+    }
+    updateHUD();
+    return;
+  }
+  
+  raycaster.setFromCamera({ x: 0, y: 0 }, camera);
+  raycaster.far = 6;
+  const hits = raycaster.intersectObjects(collectibles, true);
+  
+  if (hits.length === 0) { toast('Nothing nearby'); return; }
+  
+  let obj = hits[0].object;
+  while (obj && !obj.userData.type) obj = obj.parent;
+  if (!obj) return;
+  
+  obj.userData.hp -= 1;
+  
+  if (obj.userData.hp <= 0) {
+    const type = obj.userData.type;
+    if (type === 'tree') { player.wood += 3; toast('🪵 +3 Wood'); }
+    else if (type === 'bush') { player.food = Math.min(100, player.food + 15); toast('🍖 +15 Food'); }
+    else if (type === 'coal') { player.coal += 2; toast('⚫ +2 Coal'); }
+    else if (type === 'iron') { player.coins += 5; toast('💰 +5 Coins (iron)'); }
+    else if (type === 'gold') { player.coins += 15; toast('💰 +15 Coins (gold)'); }
+    else if (type === 'bone') { player.bone += 1; toast('🦴 +1 Bone'); }
+    else { player.stone += 2; toast('🪨 +2 Stone'); }
+    
+    scene.remove(obj);
+    const idx = collectibles.indexOf(obj);
+    if (idx >= 0) collectibles.splice(idx, 1);
+  } else {
+    toast('Hit!');
+    // Small shake
+    handSwing = 1;
+  }
+  updateHUD();
+}
+
+let handSwing = 0;
+
+function attack() {
+  if (player.cooldown > 0) return;
+  player.cooldown = 0.4;
+  handSwing = 1;
+  
+  const fx = -Math.sin(player.yaw);
+  const fz = -Math.cos(player.yaw);
+  const dmg = player.weapon === 'sword' ? 40 : (player.weapon === 'axe' ? 25 : 10);
+  
+  // Animals
+  for (let i = animals.length - 1; i >= 0; i--) {
+    const a = animals[i];
+    if (a.tamed) continue;
+    const dx = a.x - player.x, dz = a.z - player.z;
+    const d = Math.hypot(dx, dz);
+    if (d > 3) continue;
+    if ((dx * fx + dz * fz) / d < 0.3) continue;
+    a.hp -= dmg;
+    toast('Hit ' + ANIMAL_TYPES[a.type].name + '!');
+    if (a.hp <= 0) {
+      player.bone += 2;
+      player.food = Math.min(100, player.food + 25);
+      scene.remove(a.mesh);
+      animals.splice(i, 1);
+      toast('💀 Killed! +2 bone +25 food');
+      updateHUD();
+    }
+    return;
+  }
+  
+  // Enemies
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    const dx = e.x - player.x, dz = e.z - player.z;
+    const d = Math.hypot(dx, dz);
+    if (d > 3) continue;
+    if ((dx * fx + dz * fz) / d < 0.3) continue;
+    e.hp -= dmg;
+    toast('Hit enemy!');
+    if (e.hp <= 0) {
+      scene.remove(e.mesh);
+      enemies.splice(i, 1);
+      player.bone += 2;
+      player.coins += 5;
+      toast('💀 +2 bone +5 coins');
+      updateHUD();
+    }
+    return;
+  }
+  
+  toast('Nothing to hit');
+}
+
+function tameOrRide() {
+  if (player.mounted) {
+    const a = player.mounted;
+    a.mounted = false;
+    player.mounted = null;
+    player.x = a.x - 1.5;
+    player.z = a.z;
+    toast('Dismounted');
+    return;
+  }
+  
+  // Find nearest animal
+  let nearest = null, nd = 5;
+  for (const a of animals) {
+    const d = Math.hypot(a.x - player.x, a.z - player.z);
+    if (d < nd) { nd = d; nearest = a; }
+  }
+  
+  if (!nearest) { toast('No animal nearby'); return; }
+  
+  const t = ANIMAL_TYPES[nearest.type];
+  
+  if (nearest.tamed) {
+    if (t.rideable) {
+      nearest.mounted = true;
+      player.mounted = nearest;
+      toast('🐴 Riding ' + t.name + '!');
+    } else {
+      toast(t.name + ' is your companion');
+    }
+    return;
+  }
+  
+  if (player.food < 10) { toast('Need 10+ food to tame'); return; }
+  player.food -= 10;
+  nearest.trust += 1;
+  toast('Fed ' + t.name + ' (' + nearest.trust + '/' + t.trustMax + ')');
+  
+  if (nearest.trust >= t.trustMax) {
+    nearest.tamed = true;
+    toast('✨ Tamed ' + t.name + '!');
+    if (nearest.type === 'wolf') player.companion = nearest;
+  }
+  updateHUD();
+}
+
+// ═══════════════════════════════════════════════════════
+// ENEMIES
+// ═══════════════════════════════════════════════════════
+function spawnEnemy() {
+  const angle = Math.random() * Math.PI * 2;
+  const dist = 18 + Math.random() * 8;
+  const x = player.x + Math.cos(angle) * dist;
+  const z = player.z + Math.sin(angle) * dist;
+  const y = terrainH(x, z);
+  
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x4a1a1a, flatShading: true });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1.1, 4, 7), bodyMat);
+  body.position.y = 1.1;
+  body.castShadow = true;
+  g.add(body);
+  
+  const headMat = new THREE.MeshLambertMaterial({ color: 0x6a2a2a, flatShading: true });
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.36, 8, 6), headMat);
+  head.position.y = 2;
+  head.castShadow = true;
+  g.add(head);
+  
+  // Red glowing eyes
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff2020 });
+  for (const sx of [-0.13, 0.13]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 5), eyeMat);
+    eye.position.set(sx, 2.05, -0.3);
+    g.add(eye);
+  }
+  
+  // Legs
+  const legMat = new THREE.MeshLambertMaterial({ color: 0x3a1010 });
+  for (const dx of [-0.25, 0.25]) for (const dz of [-0.15, 0.15]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.2, 5), legMat);
+    leg.position.set(dx, 0.6, dz);
+    leg.castShadow = true;
+    g.add(leg);
+  }
+  
+  // Red light glow
+  const light = new THREE.PointLight(0xff3030, 2, 8, 2);
+  light.position.set(0, 1.8, 0);
+  g.add(light);
+  
+  g.position.set(x, y, z);
+  scene.add(g);
+  
+  enemies.push({
+    mesh: g, x, z, y,
+    hp: 60, maxHp: 60, speed: 2.8, dmg: 6,
+    attackCd: 0, walkT: 0
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// UPDATE
+// ═══════════════════════════════════════════════════════
+function updatePlayer(dt) {
+  if (player.mounted) {
+    const a = player.mounted;
+    player.x = a.x;
+    player.z = a.z;
+    player.y = terrainH(a.x, a.z) + 2.8;
+    updateCamera();
+    return;
+  }
+  
+  // Input
+  let mx = 0, mz = 0;
+  if (keys['KeyW'] || keys['ArrowUp']) mz -= 1;
+  if (keys['KeyS'] || keys['ArrowDown']) mz += 1;
+  if (keys['KeyA'] || keys['ArrowLeft']) mx -= 1;
+  if (keys['KeyD'] || keys['ArrowRight']) mx += 1;
+  mx += joyVec.x;
+  mz += joyVec.y;
+  
+  const len = Math.hypot(mx, mz);
+  if (len > 1) { mx /= len; mz /= len; }
+  
+  // Sprint
+  const sprintKey = keys['ShiftLeft'] || keys['ShiftRight'];
+  player.isSprinting = sprintKey && len > 0.1;
+  const speed = player.isSprinting ? RUN_SPEED : WALK_SPEED;
+  
+  const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
+  const dx = (mx * cy + mz * sy) * speed;
+  const dz = (mx * -sy + mz * cy) * speed;
+  
+  player.x += dx * dt;
+  player.z += dz * dt;
+  player.x = Math.max(-105, Math.min(105, player.x));
+  player.z = Math.max(-105, Math.min(105, player.z));
+  
+  // Vertical
+  const groundY = terrainH(player.x, player.z) + EYE_HEIGHT;
+  player.vy -= GRAVITY * dt;
+  player.y += player.vy * dt;
+  if (player.y <= groundY) {
+    player.y = groundY;
+    player.vy = 0;
+    player.onGround = true;
+  } else {
+    player.onGround = false;
+  }
+  
+  // Bob
+  const moving = Math.hypot(dx, dz) > 0.5;
+  if (moving && player.onGround) {
+    player.bob += dt * (player.isSprinting ? 14 : 9);
+  } else {
+    player.bob += dt * 2;
+  }
+  
+  // Survival
+  player.food -= dt * 0.25;
+  player.water -= dt * 0.35;
+  if (player.food < 0) { player.food = 0; player.hp -= dt * 1.5; }
+  if (player.water < 0) { player.water = 0; player.hp -= dt * 2; }
+  if (player.cooldown > 0) player.cooldown -= dt;
+  
+  // Water
+  if (player.y < -1 + EYE_HEIGHT && player.water < 100) {
+    player.water = Math.min(100, player.water + dt * 40);
+  }
+  
+  // Death
+  if (player.hp <= 0) {
+    player.hp = 100; player.food = 100; player.water = 100;
+    player.x = 0; player.z = 0;
+    for (const e of enemies) scene.remove(e.mesh);
+    enemies.length = 0;
+    toast('💀 You died — respawned');
+    updateHUD();
+  }
+  
+  updateCamera();
+  
+  if (Math.random() < 0.05) updateHUD();
+}
+
+function updateCamera() {
+  const bobY = player.onGround && !player.mounted 
+    ? Math.sin(player.bob) * 0.06 : 0;
+  const bobX = player.onGround && !player.mounted 
+    ? Math.cos(player.bob * 0.5) * 0.02 : 0;
+  
+  camera.position.set(player.x + bobX, player.y + bobY, player.z);
+  camera.rotation.y = player.yaw;
+  camera.rotation.x = player.pitch;
+  
+  // Hand swing
+  if (handSwing > 0) {
+    handSwing -= 0.1;
+    currentHand.rotation.x = -handSwing * 1.2;
+    currentHand.position.z = -handSwing * 0.15;
+  } else {
+    currentHand.rotation.x *= 0.8;
+    currentHand.position.z *= 0.8;
+  }
+}
+
+function updateAnimals(dt) {
+  for (const a of animals) {
+    if (a.mounted) {
+      const dx = player.x - a.x, dz = player.z - a.z;
+      const d = Math.hypot(dx, dz);
+      if (d > 0.3) {
+        a.x += (dx / d) * Math.min(d, 8 * dt);
+        a.z += (dz / d) * Math.min(d, 8 * dt);
+      }
+      a.mesh.position.set(a.x, terrainH(a.x, a.z), a.z);
+      a.mesh.rotation.y = player.yaw;
+      continue;
+    }
+    
+    const dx = player.x - a.x, dz = player.z - a.z;
+    const d = Math.hypot(dx, dz);
+    
+    // Companion
+    if (a === player.companion && d > 4) {
+      const nx = dx / d, nz = dz / d;
+      a.x += nx * 6 * dt;
+      a.z += nz * 6 * dt;
+      a.mesh.rotation.y = Math.atan2(nx, nz);
+      a.walkT += dt * 8;
+    } else if (!a.tamed) {
+      // Wild behavior
+      let moved = false;
+      
+      if ((a.type === 'deer' || a.type === 'horse') && d < 12) {
+        const nx = -dx / d, nz = -dz / d;
+        a.x += nx * a.speed * dt;
+        a.z += nz * a.speed * dt;
+        a.mesh.rotation.y = Math.atan2(nx, nz);
+        a.walkT += dt * 10;
+        moved = true;
+      } else if (a.type === 'boar' && d < 3.5) {
+        a.atkCd -= dt;
+        if (a.atkCd <= 0) {
+          a.atkCd = 2;
+          player.hp -= a.dmg;
+          toast('💥 Boar attack -' + a.dmg);
+          updateHUD();
+        }
+      } else if (a.type === 'wolf' && isNight && d < 22) {
+        const nx = dx / d, nz = dz / d;
+        a.x += nx * a.speed * dt;
+        a.z += nz * a.speed * dt;
+        a.mesh.rotation.y = Math.atan2(nx, nz);
+        a.walkT += dt * 12;
+        moved = true;
+        a.atkCd -= dt;
+        if (d < 2 && a.atkCd <= 0) {
+          a.atkCd = 1.8;
+          player.hp -= a.dmg;
+          toast('💥 Wolf attack -' + a.dmg);
+          updateHUD();
+        }
+      } else {
+        a.wanderTimer -= dt;
+        if (a.wanderTimer <= 0) {
+          a.wanderTimer = 2 + Math.random() * 4;
+          a.wanderAngle = Math.random() * 6.28;
+        }
+        a.x += Math.cos(a.wanderAngle) * a.speed * 0.3 * dt;
+        a.z += Math.sin(a.wanderAngle) * a.speed * 0.3 * dt;
+        a.mesh.rotation.y = a.wanderAngle;
+        a.walkT += dt * 6;
+      }
+      
+      // Home leash
+      const homeD = Math.hypot(a.x - a.homeX, a.z - a.homeZ);
+      if (homeD > 50) {
+        const nx = (a.homeX - a.x) / homeD;
+        const nz = (a.homeZ - a.z) / homeD;
+        a.x += nx * a.speed * dt;
+        a.z += nz * a.speed * dt;
+      }
+    }
+    
+    a.x = Math.max(-105, Math.min(105, a.x));
+    a.z = Math.max(-105, Math.min(105, a.z));
+    
+    // Walking animation - subtle bob
+    const y = terrainH(a.x, a.z) + Math.abs(Math.sin(a.walkT)) * 0.08;
+    a.mesh.position.set(a.x, y, a.z);
+  }
+}
+
+function updateEnemies(dt) {
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    const dx = player.x - e.x, dz = player.z - e.z;
+    const d = Math.hypot(dx, dz);
+    
+    if (d > 70) {
+      scene.remove(e.mesh);
+      enemies.splice(i, 1);
+      continue;
+    }
+    
+    if (d > 1.8) {
+      e.x += (dx / d) * e.speed * dt;
+      e.z += (dz / d) * e.speed * dt;
+      e.mesh.rotation.y = Math.atan2(dx, dz);
+      e.walkT += dt * 8;
+    }
+    
+    e.attackCd -= dt;
+    if (d < 2.2 && e.attackCd <= 0) {
+      e.attackCd = 1.8;
+      player.hp -= e.dmg;
+      toast('💥 -' + e.dmg + ' HP');
+      updateHUD();
+    }
+    
+    const y = terrainH(e.x, e.z) + Math.abs(Math.sin(e.walkT)) * 0.1;
+    e.mesh.position.set(e.x, y, e.z);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// DAY / NIGHT
+// ═══════════════════════════════════════════════════════
+let dayTime = 0.25;
+const DAY_LENGTH = 240;
+let dayCount = 1;
+let isNight = false;
+
+const skyColors = {
+  nightTop: new THREE.Color(0x050810),
+  nightBot: new THREE.Color(0x1a2540),
+  dawnTop:  new THREE.Color(0x3a2550),
+  dawnBot:  new THREE.Color(0xe08850),
+  dayTop:   new THREE.Color(0x4a90d0),
+  dayBot:   new THREE.Color(0xa8d8f0),
+  duskTop:  new THREE.Color(0x4a2a50),
+  duskBot:  new THREE.Color(0xd06040)
+};
+
+function updateDayNight(dt) {
+  dayTime += dt / DAY_LENGTH;
+  if (dayTime >= 1) { dayTime -= 1; dayCount++; }
+  
+  const newNight = dayTime < 0.2 || dayTime > 0.8;
+  if (newNight && !isNight) toast('🌙 Night falls...');
+  if (!newNight && isNight) toast('☀️ Sunrise');
+  isNight = newNight;
+  
+  // Time display
+  const h = Math.floor(dayTime * 24);
+  const m = Math.floor((dayTime * 24 - h) * 60);
+  document.getElementById('time').textContent = 
+    (isNight ? '🌙' : '☀️') + ' Day ' + dayCount + ' — ' + 
+    String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+  
+  // Compute sky colors
+  let topC, botC;
+  if (dayTime < 0.15) {
+    topC = skyColors.nightTop; botC = skyColors.nightBot;
+  } else if (dayTime < 0.22) {
+    const t = (dayTime - 0.15) / 0.07;
+    topC = skyColors.nightTop.clone().lerp(skyColors.dawnTop, t);
+    botC = skyColors.nightBot.clone().lerp(skyColors.dawnBot, t);
+  } else if (dayTime < 0.3) {
+    const t = (dayTime - 0.22) / 0.08;
+    topC = skyColors.dawnTop.clone().lerp(skyColors.dayTop, t);
+    botC = skyColors.dawnBot.clone().lerp(skyColors.dayBot, t);
+  } else if (dayTime < 0.7) {
+    topC = skyColors.dayTop; botC = skyColors.dayBot;
+  } else if (dayTime < 0.78) {
+    const t = (dayTime - 0.7) / 0.08;
+    topC = skyColors.dayTop.clone().lerp(skyColors.duskTop, t);
+    botC = skyColors.dayBot.clone().lerp(skyColors.duskBot, t);
+  } else if (dayTime < 0.85) {
+    const t = (dayTime - 0.78) / 0.07;
+    topC = skyColors.duskTop.clone().lerp(skyColors.nightTop, t);
+    botC = skyColors.duskBot.clone().lerp(skyColors.nightBot, t);
+  } else {
+    topC = skyColors.nightTop; botC = skyColors.nightBot;
+  }
+  
+  scene.background.copy(botC);
+  scene.fog.color.copy(botC);
+  scene.fog.near = 30 + (isNight ? 10 : 40);
+  scene.fog.far = 120 + (isNight ? 40 : 80);
+  
+  // Lights
+  const lightLevel = isNight ? 0.15 : 1.0;
+  sun.intensity = 0.15 + lightLevel * 1.35;
+  hemi.intensity = 0.35 + lightLevel * 0.65;
+  amb.intensity = 0.15 + lightLevel * 0.2;
+  
+  // Sun position
+  const sunAngle = (dayTime - 0.25) * Math.PI * 2;
+  sun.position.set(Math.cos(sunAngle) * 100, Math.sin(sunAngle) * 100, 40);
+  sun.target.position.set(player.x, 0, player.z);
+  
+  // Stars
+  stars.material.opacity = isNight ? Math.min(1, (dayTime < 0.2 ? dayTime * 5 : (1 - dayTime) * 5)) : 0;
+  stars.position.set(player.x, 0, player.z);
+  
+  // Spawn enemies
+  if (isNight && enemies.length < 8 && Math.random() < dt * 0.7) {
+    spawnEnemy();
+  }
+  
+  // Kill enemies in daylight
+  if (!isNight) {
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const e = enemies[i];
+      e.hp -= dt * 30;
+      if (e.hp <= 0) {
+        // Dust effect
+        scene.remove(e.mesh);
+        enemies.splice(i, 1);
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// MAIN LOOP
+// ═══════════════════════════════════════════════════════
+let lastTime = performance.now();
+let started = false;
+
+function loop() {
+  requestAnimationFrame(loop);
+  const now = performance.now();
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+  
+  if (started) {
+    updatePlayer(dt);
+    updateAnimals(dt);
+    updateEnemies(dt);
+    updateDayNight(dt);
+  }
+  
+  renderer.render(scene, camera);
+}
+
+document.getElementById('startBtn').onclick = () => {
+  document.getElementById('menu').classList.add('hide');
+  started = true;
+  if (!isTouch) renderer.domElement.requestPointerLock();
+  updateHUD();
+  toast('🌲 Welcome to the wild');
+};
+
+updateHUD();
+loop();
+</script>
+</body>
+</html>
